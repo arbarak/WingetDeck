@@ -15,6 +15,7 @@ from ...core.runner import RunView
 from ...core.selection import merge_scan
 from ...winget.models import ChangeKind
 from ..widgets.package_table import PackageTable
+from .details import DetailsScreen
 
 _REFRESH_BLOCKED = "Not available during an upgrade. It comes back when the run ends or pauses between packages."
 _ACTIONS_HEIGHT = 3
@@ -37,6 +38,7 @@ class PackagesScreen(Screen):
         Binding("a", "select_all", "All"),
         Binding("n", "select_none", "None"),
         Binding("u", "upgrade", "Upgrade"),
+        Binding("d", "details", "Details"),
         Binding("escape", "back", "Back"),
     ]
 
@@ -49,6 +51,7 @@ class PackagesScreen(Screen):
         self._scanning = False
         self._log_lines: list[str] = []
         self._run_was_active = False
+        self._ignored_at_scan: set[str] = set()
 
     def compose(self) -> ComposeResult:
         ascii_mode = self.app.ascii_mode
@@ -133,6 +136,7 @@ class PackagesScreen(Screen):
 
     def _apply_scan(self, result, table: PackageTable) -> None:
         ignored = self.app.store.load_settings().ignored
+        self._ignored_at_scan = set(ignored)
         shown = [p for p in result.packages if p.id not in ignored]
         hidden = len(result.packages) - len(shown)
         merged = merge_scan(
@@ -272,6 +276,37 @@ class PackagesScreen(Screen):
         packages = self.query_one(PackageTable).ticked_packages()
         if packages:
             self.app.start_upgrade(packages)
+
+    def action_details(self) -> None:
+        table = self.query_one(PackageTable)
+        if table.rows:
+            self.app.push_screen(DetailsScreen(table.rows[table.cursor]), self._details_closed)
+
+    def _details_closed(self, _result: None) -> None:
+        self.apply_settings()
+
+    def on_screen_resume(self) -> None:
+        self.apply_settings()
+
+    def apply_settings(self) -> None:
+        """Settings may have changed while another screen was on top."""
+        if self._first_scan:
+            return
+        settings = self.app.store.load_settings()
+        table = self.query_one(PackageTable)
+        changed_pins = table.include_pinned != settings.defaults.include_pinned
+        table.include_pinned = settings.defaults.include_pinned
+        shown_again = self._ignored_at_scan - settings.ignored
+        if changed_pins or shown_again:
+            if not self._scanning:
+                self.scan_packages(update_sources=False)
+            return
+        kept = [p for p in table.all_rows if p.id not in settings.ignored]
+        if len(kept) != len(table.all_rows):
+            table.set_rows(kept, table.ticked, table.new_ids)
+            self._show_rows_or_message()
+            self.fit_table()
+        self._ignored_at_scan = set(settings.ignored)
 
     def action_back(self) -> None:
         box = self.query_one("#filter", Input)

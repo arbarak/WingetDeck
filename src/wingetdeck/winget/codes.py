@@ -18,12 +18,14 @@ class Outcome(Enum):
 
 
 APP_IN_USE_CODE = 0x8A150101
+_AGREEMENTS_CODE = 0x8A150041
 
 _OUTCOMES = {
     0x8A150109: Outcome.SUCCESS_RESTART,  # finished, restart to complete
     0x8A15010B: Outcome.SUCCESS_RESTART,  # finished, PC restarting by itself
     0x8A15002B: Outcome.SKIPPED,  # no applicable upgrade
     0x8A150061: Outcome.SKIPPED,  # already installed
+    0x8A150041: Outcome.SKIPPED,  # needs agreements the user has not accepted
     0x8A15010A: Outcome.FAILED_RESTART_FIRST,
     APP_IN_USE_CODE: Outcome.FAILED_IN_USE,
     0x8A150103: Outcome.FAILED_IN_USE,  # file in use
@@ -44,7 +46,9 @@ def explain(exit_code: int) -> Explanation:
     if code == 0:
         return Explanation(Outcome.SUCCESS, hex_code, "Upgraded")
     entry = CODES.get(code)
-    if entry:
+    if code == _AGREEMENTS_CODE:
+        message = "This package has licence agreements. Turn on accepting agreements in Settings to upgrade it."
+    elif entry:
         message = entry[1]
     else:
         message = f"winget stopped with an unknown code {hex_code}"

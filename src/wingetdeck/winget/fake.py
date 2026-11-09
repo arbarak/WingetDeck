@@ -102,6 +102,7 @@ class FakeBackend:
         self.options_seen: dict[str, UpgradeOptions] = {}
         self.old_versions: dict[str, list[str]] = {}
         self.refuse_freeze = False
+        self.accept_source_agreements = False
 
     def capabilities(self) -> Capabilities:
         return Capabilities(

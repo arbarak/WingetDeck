@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from textual.app import App
+from textual.binding import Binding
+from textual.screen import ModalScreen
 
 from .. import __version__
 from ..core.logs import SessionLog
@@ -14,16 +17,35 @@ from ..core.runner import Runner, RunView
 from ..core.store import Store
 from ..winget.backend import UpgradeOptions, WingetBackend
 from ..winget.models import Package
+from .screens.dialogs import ConfirmDialog
+from .screens.logs import LogsScreen
 from .screens.no_winget import NoWingetScreen
 from .screens.packages import PackagesScreen
 from .screens.progress import ProgressScreen
+from .screens.settings import SettingsScreen
 from .screens.splash import SplashScreen
 from .themes import DEFAULT_THEME, DEFAULT_VARIABLES, THEMES
+
+
+_CONSENT = (
+    "Many packages come with licence agreements, and winget's sources have terms of their own. "
+    "Winget stops and asks about these, but an upgrade running here cannot answer it.\n\n"
+    "To go on without being asked, WingetDeck can add --accept-package-agreements and "
+    "--accept-source-agreements to each upgrade, which accepts them on your behalf. "
+    "You can read a package's licence on its homepage from the details panel.\n\n"
+    "Without this, packages that need it are marked as skipped. You can change it in Settings."
+)
+_AGREE = "Accept agreements"
+_NO_AGREE = "Skip those packages"
 
 
 class WingetDeckApp(App):
     TITLE = "WingetDeck — Package Upgrader"
     CSS_PATH = Path(__file__).parent / "app.tcss"
+    BINDINGS = [
+        Binding("l", "show_logs", "Logs"),
+        Binding("t", "show_settings", "Settings"),
+    ]
 
     def __init__(
         self,
@@ -44,13 +66,14 @@ class WingetDeckApp(App):
         self.sub_title = f"v{__version__}"
         for theme in THEMES:
             self.register_theme(theme)
-        saved = store.load_settings().theme
-        self.theme = saved if saved in self.available_themes else DEFAULT_THEME
+        settings = store.load_settings()
+        self.theme = settings.theme if settings.theme in self.available_themes else DEFAULT_THEME
 
     def get_css_variables(self) -> dict[str, str]:
         return {**DEFAULT_VARIABLES, **super().get_css_variables()}
 
     def on_mount(self) -> None:
+        self.backend.accept_source_agreements = self.store.load_settings().consented_agreements
         self.push_screen(SplashScreen())
 
     def add_run_listener(self, listener: Callable[[RunView], None]) -> None:
@@ -70,11 +93,28 @@ class WingetDeckApp(App):
 
     def start_upgrade(self, packages: list[Package]) -> None:
         self.log_file.info("Upgrade requested", packages=[p.id for p in packages])
-        self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+        settings = self.store.load_settings()
+        if settings.asked_agreements:
+            self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+            return
+
+        def answered(choice: str | None) -> None:
+            if choice is None:
+                return
+            consent = choice == _AGREE
+            self.store.save_settings(
+                replace(self.store.load_settings(), asked_agreements=True, consented_agreements=consent)
+            )
+            self.backend.accept_source_agreements = consent
+            self.log_file.info("Agreements answered", consent=consent)
+            self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+
+        self.push_screen(ConfirmDialog("Licence agreements", _CONSENT, (_AGREE, _NO_AGREE)), answered)
 
     def options_for(self, package: Package) -> UpgradeOptions:
         settings = self.store.load_settings()
-        return settings.per_package.get(package.id, settings.defaults)
+        chosen = settings.per_package.get(package.id, settings.defaults)
+        return replace(chosen, accept_agreements=settings.consented_agreements)
 
     async def _begin_run(self, packages: list[Package]) -> None:
         try:
@@ -109,6 +149,17 @@ class WingetDeckApp(App):
     def check_winget_again(self) -> None:
         self.backend.refresh_capabilities()
         self.switch_screen(SplashScreen())
+
+    def _on_top(self, kind: type) -> bool:
+        return isinstance(self.screen, kind) or isinstance(self.screen, ModalScreen)
+
+    def action_show_logs(self) -> None:
+        if not self._on_top(LogsScreen):
+            self.push_screen(LogsScreen())
+
+    def action_show_settings(self) -> None:
+        if not self._on_top(SettingsScreen):
+            self.push_screen(SettingsScreen())
 
     async def action_quit(self) -> None:
         await self.runner.shutdown()

@@ -80,6 +80,8 @@ class UpgradeHandle(Protocol):
 
 
 class WingetBackend(Protocol):
+    accept_source_agreements: bool
+
     def capabilities(self) -> Capabilities | None: ...
 
     def refresh_capabilities(self) -> None: ...
