@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from textual.app import App
 
 from .. import __version__
 from ..core.logs import SessionLog
-from ..core.runner import Runner
+from ..core.runner import Runner, RunView
 from ..core.store import Store
 from ..winget.backend import WingetBackend
+from ..winget.models import Package
 from .screens.no_winget import NoWingetScreen
 from .screens.packages import PackagesScreen
 from .screens.splash import SplashScreen
@@ -34,7 +36,9 @@ class WingetDeckApp(App):
         self.log_file = log  # App.log is Textual's own
         self.runner = runner
         self.ascii_mode = ascii_mode
+        self._run_listeners: list[Callable[[RunView], None]] = []
         super().__init__()
+        runner.on_change = self._run_changed
         self.sub_title = f"v{__version__}"
         for theme in THEMES:
             self.register_theme(theme)
@@ -47,9 +51,26 @@ class WingetDeckApp(App):
     def on_mount(self) -> None:
         self.push_screen(SplashScreen())
 
+    def add_run_listener(self, listener: Callable[[RunView], None]) -> None:
+        self._run_listeners.append(listener)
+
+    def remove_run_listener(self, listener: Callable[[RunView], None]) -> None:
+        if listener in self._run_listeners:
+            self._run_listeners.remove(listener)
+
+    def _run_changed(self, view: RunView) -> None:
+        for listener in list(self._run_listeners):
+            listener(view)
+
     def show_packages(self, source: str | None) -> None:
         self.log_file.info("Source chosen", source=source or "all")
         self.push_screen(PackagesScreen(source))
+
+    def start_upgrade(self, packages: list[Package]) -> None:
+        self.log_file.info("Upgrade requested", packages=[p.id for p in packages])
+
+    def show_progress(self) -> None:
+        pass
 
     def show_no_winget(self, reason: str | None = None) -> None:
         self.switch_screen(NoWingetScreen(reason))

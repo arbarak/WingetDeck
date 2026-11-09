@@ -197,3 +197,111 @@ Button:disabled {
 #no-winget-buttons Button {
     margin-right: 1;
 }
+
+/* Package table */
+
+#packages-body {
+    width: 100%;
+    height: 1fr;
+}
+
+#filter {
+    height: 3;
+    border: tall $wd-blue;
+}
+
+PackageTable {
+    width: 100%;
+    height: auto;
+    background: $background;
+    scrollbar-size-vertical: 1;
+}
+
+PackageTable > .table--header {
+    background: $panel;
+    color: $foreground;
+    text-style: bold;
+}
+
+PackageTable > .table--cursor {
+    background: $wd-blue;
+    color: white;
+    text-style: bold;
+}
+
+PackageTable > .table--hover {
+    background: $panel;
+}
+
+PackageTable > .table--ticked {
+    color: $wd-lime;
+    text-style: bold;
+}
+
+PackageTable > .table--unticked {
+    color: $wd-dim;
+}
+
+PackageTable > .table--major {
+    color: $wd-major;
+}
+
+PackageTable > .table--minor {
+    color: $wd-minor;
+}
+
+PackageTable > .table--patch {
+    color: $wd-lime;
+}
+
+PackageTable > .table--unknown {
+    color: $wd-dim;
+}
+
+PackageTable > .table--new {
+    background: $wd-cyan;
+    color: black;
+    text-style: bold;
+}
+
+PackageTable > .table--note {
+    color: $wd-dim;
+}
+
+#empty {
+    width: 100%;
+    height: 1fr;
+    content-align: center middle;
+    color: $wd-lime;
+}
+
+#table-actions {
+    width: 100%;
+    height: 3;
+}
+
+#table-actions Button {
+    margin-right: 1;
+}
+
+#actions-gap {
+    width: 1fr;
+    height: 1;
+}
+
+#table-log-box {
+    width: 100%;
+    height: 1fr;
+    border-top: solid $wd-blue;
+    padding: 0 1;
+    scrollbar-size-vertical: 1;
+}
+
+#table-log {
+    width: 100%;
+    height: auto;
+}
+
+#upgrade {
+    width: 16;
+}
