@@ -1,12 +1,15 @@
 # What has been tested, on what
 
-Version 1.0.0, 9 November 2026. "Supported" in the design means the app targets a system. This page says what has
+Version 1.0.1, 9 November 2026. "Supported" in the design means the app targets a system. This page says what has
 actually been run.
 
-## The one test machine
+## The test machines
 
-Windows 11 Pro 23H2 (build 22631), x64, en-US, winget v1.29.380. Windows Sandbox runs the same Windows build, so it
-proves nothing about other Windows versions.
+**Main machine:** Windows 11 Pro 23H2 (build 22631), x64, en-US, winget v1.29.380. Windows Sandbox runs the same Windows
+build, so it proves nothing about other Windows versions.
+
+**Second PC:** the owner opened version 1.0.0 on Windows 10 (build 19045), and that is how the problems fixed in 1.0.1
+were found. Version 1.0.1 has not been run there yet.
 
 ## Not yet done
 
@@ -21,11 +24,12 @@ against the pretend winget in tests.
 | U2: long freezes during a download | Same | Whether a server drops a download frozen for many minutes, and whether winget then fails cleanly |
 | Default-downloader control in Sandbox | Same; the first attempt froze the source update rather than a download, so it was not valid | Confirms the host measurement in a clean system |
 | Exe in a clean Sandbox | Same | `scripts/portable_check.py` hides Python from the exe on the owner's PC, which is close but not a PC that never had it |
-| Windows 10, Server 2019/2022/2025, LTSC | No such machine or VM | Anything at all on those systems |
+| Version 1.0.1 on Windows 10 | Not yet tried on the second PC | That the fixes hold there. Windows 10 and 11 fill in missing symbols differently, so the checks below cannot fully stand in for it |
+| Windows Server 2019/2022/2025, LTSC | No such machine or VM | Anything at all on those systems |
 | ARM64 | No machine, and no native exe | The x64 exe under emulation, or running from source |
 | Non-English Windows | Not tried | Parsing rests on column positions and saved samples only |
-| Dragging a real window edge, maximise and minimise, by hand | Kept off the owner's desktop | Resizing was tested in a real pseudo console instead (below) |
-| Windows Terminal and classic console, seen by eye | Same | Mouse clicks in the classic console in particular |
+| Dragging a real window edge and minimising, by hand | Not tried | Resizing was tested in a real pseudo console instead (below) |
+| Version 1.0.1 in Windows Terminal, seen by eye | Not done in this round | Windows Terminal keeps the full symbols, and the automatic tests cover that path |
 | The taskbar progress colour | Only the code sent was checked | That the terminal shows it |
 | The Windows notification appearing | The script was run up to the point of showing it, so nothing popped up | That it appears |
 | Long unattended runs, real installer prompts | Not tried | |
@@ -37,7 +41,7 @@ against the pretend winget in tests.
 
 ### Automated suite
 
-`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 465 passed at v1.0.0. A test
+`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 534 passed at v1.0.1. A test
 marked `real` reads the real winget (passed) and one marked `real_download` downloads a package; both run only on
 request, and `real_download` was not rerun on the final code.
 
@@ -54,8 +58,8 @@ See `docs/spikes/2026-11-09-sandbox-results.md`. These tested winget itself, bef
 
 ### The built exes
 
-Each was run on the owner's PC, in a pseudo console with no window on the desktop. Final builds:
-`dist\2026-11-09\140546\WingetDeck-x64.exe` and `dist\2026-11-09\140632\WingetDeck-x86.exe`.
+Each was run on the owner's PC, in a pseudo console with no window on the desktop. Version 1.0.1 builds:
+`dist\2026-11-09\154416\WingetDeck-x64.exe` and `dist\2026-11-09\WingetDeck-x86.exe`.
 
 | Check | x64 | x86 |
 |---|---|---|
@@ -71,7 +75,7 @@ Upgrade was never pressed in any of these.
 
 ### One real upgrade
 
-On 9 November 2026 the final x64 exe upgraded one package on the owner's PC, wkhtmltox (`wkhtmltopdf.wkhtmltox`), driven
+On 9 November 2026 the version 1.0.0 x64 exe upgraded one package on the owner's PC, wkhtmltox (`wkhtmltopdf.wkhtmltox`), driven
 through a pseudo console by the keys a person would press. The default downloader was in use, and the licence question
 was answered "Skip those packages".
 
@@ -88,6 +92,32 @@ This package does not tell Windows its version, so winget still shows it as `Unk
 upgrade. That is how this package behaves, and it means the upgrade did not show a new version number. A package that
 reports its version has not yet been upgraded by the exe.
 
+### The classic Windows console
+
+Windows 10 opens the exe in the classic console, and Windows 11 normally does not, which is why 1.0.0's problems were
+missed. These checks open that real console on Windows 11, using `conhost.exe`, with the demo. Each screen was looked at
+in a screenshot.
+
+| Setup | Exe | Screens | Result |
+|---|---|---|---|
+| Consolas | x64 | Start, table, details, filter, settings, logs, history, palette, licence, downloading, installing, paused, stop, quit, resume | No boxes, no stray cursor, no scrollbars |
+| Lucida Console | x64 | Start, table, details, settings, palette, downloading, paused, stop, quit, resume | Same |
+| Courier New | x64 | Table, downloading | Same |
+| Terminal (old raster font) | x64 | Start, table, downloading | Switches to plain text, as intended |
+| `--ascii` | x64 | Start, table, downloading | Plain text only |
+| Maximised | x64 | Table, settings, downloading, filter | Same, and long IDs show in full |
+| Consolas | x86 | Start, table, downloading, paused, stop | Same |
+| Consolas, real winget, scan only | x64, x86 | Table | Real upgrades listed |
+| Mouse clicks, demo | x64 | Tick a row, press UPGRADE, finish a run | All work. The clicks were sent as window messages, not by a physical mouse |
+
+The Consolas row with all the screens used a build from just before the footer and Settings layout fixes. The final build
+was then checked on its table, settings and downloading screens. This console's own font list was measured with Windows'
+font functions: Consolas lacks 27 of the symbols the app can use, Lucida Console 40 and Courier New 39.
+
+An automatic test also walks every screen in a real pseudo console, reads every character the app sends, and checks each
+against the real fonts. Those three fonts are what it checks; a console set to some other font is handled by the same
+check when the app runs, but has not been looked at.
+
 ### Other direct checks
 
 - QuickEdit is turned off and restored afterwards on a real hidden console, including after a crash and with Textual's
@@ -97,6 +127,7 @@ reports its version has not yet been upgraded by the exe.
 ## Known limits
 
 - x86 has no live numbers, only an animation and the elapsed time.
+- The classic console has fewer symbols, so its bars and icons are a little blockier than in Windows Terminal.
 - The exe is not signed, so SmartScreen may warn.
 - Ending the app from Task Manager while a download is frozen cannot unfreeze winget.
 - A custom installer argument containing spaces can slip past the diagnostic report's secret removal. Read a report

@@ -13,13 +13,14 @@
   <a href="https://github.com/arbarak/WingetDeck/releases/latest"><b>Download</b></a> &nbsp;|&nbsp;
   <a href="https://arbarak.github.io/WingetDeck/"><b>Details page</b></a> &nbsp;|&nbsp;
   <a href="https://github.dev/arbarak/WingetDeck">Read the code in your browser</a> &nbsp;|&nbsp;
-  <a href="docs/TESTED.md">What has been tested</a>
+  <a href="docs/TESTED.md">What has been tested</a> &nbsp;|&nbsp;
+  <a href="https://github.com/arbarak/WingetDeck/issues/new/choose">Report a bug</a>
 </p>
 
 ![WingetDeck downloading Git at 45 percent, with Pause and Stop buttons, a log and a queue](docs/images/downloading.png)
 
 > [!WARNING]
-> **This is the first release.** The finished app has completed one real upgrade, but Pause and Stop have not yet been
+> **This is an early release.** The finished app has completed one real upgrade, but Pause and Stop have not yet been
 > used during a real upgrade. Try `WingetDeck-x64.exe --demo` first, which installs nothing.
 > [docs/TESTED.md](docs/TESTED.md) lists exactly what was and was not checked.
 
@@ -73,7 +74,8 @@ newer. If winget is missing or too old, the app says how to get it.
 ```
 WingetDeck-x64.exe            the real thing
 WingetDeck-x64.exe --demo     try everything with a pretend winget; nothing is installed
-WingetDeck-x64.exe --ascii    plain characters, for consoles that cannot draw symbols
+WingetDeck-x64.exe --basic    reduced symbols, if your console shows empty boxes
+WingetDeck-x64.exe --ascii    plain characters only, the last resort for an old console
 WingetDeck-x64.exe --debug    also log every line winget prints
 WingetDeck-x64.exe --version  print the version
 ```
@@ -132,7 +134,22 @@ reports, with your user name and the secrets it recognises removed. A custom ins
 slip through, so read the report before you share it. Every run writes a timeline, and each package keeps winget's
 full output. If the app itself crashes, it restores the terminal and shows the path of a crash log.
 
-To report a security problem, see [SECURITY.md](SECURITY.md).
+## Found a bug?
+
+Please [report it](https://github.com/arbarak/WingetDeck/issues/new/choose). The form asks for what happened and your
+Windows version, and a screenshot helps a lot. A diagnostic report helps too, but issues are public, so read it first.
+Security problems are different: please report those privately, as [SECURITY.md](SECURITY.md) explains.
+
+### Problems already found and fixed
+
+Version 1.0.1 fixes what a first run on a second PC, with Windows 10, turned up:
+
+- Empty boxes instead of symbols in the classic Windows console, on buttons, ticks and the footer.
+- A stray blinking cursor, and scrollbars left at the edges of the window.
+- Long package IDs cut off, and a wide empty gap after the package name.
+- The last footer key cut off at the standard window size, and uneven checkboxes in Settings.
+
+[CHANGELOG.md](CHANGELOG.md) has the details for each release.
 
 ## Building
 

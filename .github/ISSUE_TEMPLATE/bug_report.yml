@@ -1,0 +1,75 @@
+name: Report a bug
+description: Something went wrong, or looks wrong, in WingetDeck.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead. A screenshot helps a lot, especially for display problems.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can it be repeated?
+      description: The steps that lead to it, if you know them.
+      placeholder: |
+        1. Opened WingetDeck
+        2. Ticked 7-Zip and pressed UPGRADE
+        3. Pressed Pause
+  - type: input
+    id: version
+    attributes:
+      label: WingetDeck version
+      description: It is at the top of the app's window, and `WingetDeck-x64.exe --version` prints it.
+      placeholder: "1.0.1"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Press Win+R and run `winver`. The start screen of the app also shows it.
+      placeholder: "Windows 10, build 19045"
+    validations:
+      required: true
+  - type: dropdown
+    id: exe
+    attributes:
+      label: Which exe?
+      options:
+        - WingetDeck-x64.exe
+        - WingetDeck-x86.exe
+        - Running from source
+    validations:
+      required: true
+  - type: dropdown
+    id: window
+    attributes:
+      label: Where does it open?
+      description: Windows Terminal has tabs at the top. The classic console has only a title bar.
+      options:
+        - Classic console
+        - Windows Terminal
+        - Another terminal
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: real
+    attributes:
+      label: Did it happen in a real upgrade?
+      options:
+        - Real upgrade
+        - Only looking at the list, nothing was upgraded
+        - Demo mode (--demo)
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Diagnostic report
+      description: >-
+        Optional, and very useful. Press `l` in the app, choose Save diagnostic report, and drag the zip here. Your user
+        name and the secrets it recognises are removed, but read it before you share it, because this page is public.
