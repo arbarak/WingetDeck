@@ -1,5 +1,5 @@
 """Pixel art drawn with half blocks. The logo is our own: a box with an arrow above it, and the word
-Winget in our own letters. Nothing here comes from wifit3's art."""
+Winget in our own letters."""
 
 from __future__ import annotations
 

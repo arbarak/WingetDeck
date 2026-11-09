@@ -165,7 +165,6 @@ The design is written up in [docs/design.md](docs/design.md).
 
 ## Credits and licence
 
-The look takes its inspiration from [wifit3](https://github.com/derv82/wifit3). The code and art here are original.
 Built with [Python](https://www.python.org/), [Textual](https://github.com/Textualize/textual),
 [pywinpty](https://github.com/andfoy/pywinpty) and [PyInstaller](https://pyinstaller.org/).
 

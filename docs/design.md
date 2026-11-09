@@ -12,20 +12,17 @@ Winget itself must be present on the PC; it cannot be bundled.
 
 ## 1. What this is and why
 
-A clickable, full-screen terminal app for upgrading Windows software through `winget`. It takes its visual
-style from [derv82/wifit3](https://github.com/derv82/wifit3) (pixel-art splash, live table, tree-style log,
-single-item dashboard). The owner saw a clickable mock of this flow and approved the feel ("ohh sooo cool").
+A clickable, full-screen terminal app for upgrading Windows software through `winget`, with a pixel-art splash,
+live table, tree-style log and single-item dashboard. The owner saw a clickable mock of this flow and approved the feel ("ohh sooo cool").
 
 The owner asked for, in their words:
 
-- "clickable for selection and button start", like the wifit3 GUI
+- "clickable for selection and button start"
 - "pause and stop etc resume", "very advanced version"
 - "compatible with all devices related to winget"
 - a responsive window that can be minimised and maximised
 - a "refresh button for any new" upgrades
 - logs "for debugging any issues or errors" in future
-
-Reference mock (throwaway, not a code base):
 
 ## 2. Goals
 
@@ -41,7 +38,7 @@ Reference mock (throwaway, not a code base):
 - Installing packages in parallel: Windows installers conflict, so the queue runs one package at a time.
 - Linux or macOS (winget is Windows only).
 - Other package managers such as Chocolatey or Scoop.
-- A native non-terminal window. wifit3 is a terminal app and that is the look the owner approved.
+- A native non-terminal window. A terminal app is the look the owner approved.
 - Telemetry or any network call of its own. The app only talks to winget.
 
 ## 4. Anti-goals: a failure even if everything else works
@@ -51,8 +48,7 @@ Reference mock (throwaway, not a code base):
 - Reporting success when an upgrade failed, or failure when it succeeded (see the codes in section 7.6).
 - Leaving a program half-installed because the user pressed a normal Stop button.
 - Upgrading anything the user did not explicitly tick and start.
-- Copying wifit3's code or art. It is GPL-2.0. We match the style and write our own; the logo in the mock
-  (a box and arrow) is original and stays that way.
+- Copying another project's code or art. We write our own; the logo (a box and arrow) is original and stays that way.
 
 ## 5. Tested facts this design rests on
 
@@ -263,7 +259,7 @@ unit-tested with saved samples, and the README states exactly what was tested on
 ## 11. How it gets made (builder's call unless marked)
 
 The builder's choices:
-- Python 3.12, Textual 8.x, `pywinpty`, packaged by PyInstaller as a standalone exe per architecture, so nothing else needs installing. Same tool family as wifit3.
+- Python 3.12, Textual 8.x, `pywinpty`, packaged by PyInstaller as a standalone exe per architecture, so nothing else needs installing.
 
 Required separation:
 - A **winget backend** behind an interface, with real and fake implementations. The UI never spawns processes directly.
