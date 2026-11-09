@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
@@ -28,7 +28,7 @@ class ConfirmDialog(ModalScreen[str | None]):
         self.cancel_label = cancel_label
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="dialog"):
+        with VerticalScroll(id="dialog"):
             yield Static(self.dialog_title, id="dialog-title", markup=False)
             yield Static(self.text, id="dialog-text", markup=False)
             with Horizontal(id="dialog-buttons"):

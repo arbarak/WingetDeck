@@ -115,7 +115,7 @@ async def test_pause_button_label_follows_controls_during_install(make_app):
 
 
 async def test_pause_holds_progress_then_resume_continues(make_app):
-    app = make_app(FakeBackend([], speed=5))
+    app = make_app(FakeBackend([], speed=1))
     async with app.run_test(size=WIDE) as pilot:
         await begin(app, pilot, stage=Stage.DOWNLOADING)
         await until(lambda: app.runner.view.progress is not None)
@@ -131,7 +131,7 @@ async def test_pause_holds_progress_then_resume_continues(make_app):
 
 
 async def test_stop_opens_dialog_with_stage_choices(make_app):
-    app = make_app(FakeBackend([], speed=5))
+    app = make_app(FakeBackend([], speed=1))
     async with app.run_test(size=WIDE) as pilot:
         await begin(app, pilot, stage=Stage.DOWNLOADING)
         await pilot.click("#stop")
@@ -205,7 +205,7 @@ async def test_force_stop_can_be_called_off(make_app):
 
 
 async def test_stop_now_without_direct_says_download_may_continue(make_app):
-    app = make_app(FakeBackend([], speed=5, direct_downloader=False))
+    app = make_app(FakeBackend([], speed=1, direct_downloader=False))
     async with app.run_test(size=WIDE) as pilot:
         await begin(app, pilot, stage=Stage.DOWNLOADING)
         await pilot.click("#stop")
@@ -252,7 +252,7 @@ async def test_first_pause_during_download_offers_direct_downloader_once(make_ap
 
 
 async def test_offer_is_not_repeated(make_app):
-    backend = FakeBackend([], speed=5, direct_downloader=False)
+    backend = FakeBackend([], speed=1, direct_downloader=False)
     app = make_app(backend)
     app.store.save_settings(replace(app.store.load_settings(), offered_direct_downloader=True))
     async with app.run_test(size=WIDE) as pilot:
@@ -268,7 +268,7 @@ async def test_no_offer_when_settings_are_locked(make_app):
         def capabilities(self):
             return replace(super().capabilities(), settings_locked=True)
 
-    app = make_app(Locked([], speed=5, direct_downloader=False))
+    app = make_app(Locked([], speed=1, direct_downloader=False))
     async with app.run_test(size=WIDE) as pilot:
         await begin(app, pilot, stage=Stage.DOWNLOADING)
         await pilot.click("#pause")
@@ -283,6 +283,7 @@ async def test_accepting_offer_records_the_change_and_applies_from_next_package(
     async with app.run_test(size=WIDE) as pilot:
         await begin(app, pilot, stage=Stage.DOWNLOADING)
         await pilot.click("#pause")
+        await until(lambda: isinstance(app.screen, ConfirmDialog))
         await pilot.pause()
         await pilot.click("#choice-0")
         await pilot.pause()
@@ -302,10 +303,11 @@ async def test_failing_to_change_the_setting_is_reported(make_app):
         def enable_direct_downloader(self, backups):
             raise OSError("read only")
 
-    app = make_app(Broken([], speed=5, direct_downloader=False))
+    app = make_app(Broken([], speed=1, direct_downloader=False))
     async with app.run_test(size=WIDE) as pilot:
         await begin(app, pilot, stage=Stage.DOWNLOADING)
         await pilot.click("#pause")
+        await until(lambda: isinstance(app.screen, ConfirmDialog))
         await pilot.pause()
         await pilot.click("#choice-0")
         await pilot.pause()
@@ -382,7 +384,7 @@ async def test_log_panel_shows_winget_output(make_app):
 
 
 async def test_queue_move_and_remove_only_waiting(make_app):
-    app = make_app(FakeBackend([], speed=5))
+    app = make_app(FakeBackend([], speed=1))
     async with app.run_test(size=WIDE) as pilot:
         await begin(app, pilot, ids=("A", "B", "C"), stage=Stage.DOWNLOADING)
         panel = app.screen.query_one(QueuePanel)
@@ -397,7 +399,7 @@ async def test_queue_move_and_remove_only_waiting(make_app):
 
 
 async def test_back_keeps_run_going_and_return_button_appears(make_app):
-    app = make_app(FakeBackend([pkg("A")], speed=5))
+    app = make_app(FakeBackend([pkg("A")], speed=1))
     async with app.run_test(size=WIDE) as pilot:
         await pilot.pause()
         app.show_packages(None)
@@ -410,8 +412,7 @@ async def test_back_keeps_run_going_and_return_button_appears(make_app):
         back = app.screen.query_one("#to-run", Button)
         assert back.display
         await pilot.click(back)
-        await pilot.pause()
-        assert isinstance(app.screen, ProgressScreen)
+        await until(lambda: isinstance(app.screen, ProgressScreen))
         await app.runner.shutdown()
 
 

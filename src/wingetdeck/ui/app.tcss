@@ -3,9 +3,25 @@
 Screen {
     background: $background;
     color: $foreground;
+    layers: default too-small;
 }
 
-Header {
+Screen.-too-small {
+    overflow: hidden;
+}
+
+#too-small {
+    layer: too-small;
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+    text-align: center;
+    background: $background;
+    color: $warning;
+    display: none;
+}
+
+TitleBar {
     background: $panel;
     color: $foreground;
 }
@@ -282,6 +298,8 @@ PackageTable > .table--note {
 
 #table-actions Button {
     margin-right: 1;
+    min-width: 5;
+    width: auto;
 }
 
 #actions-gap {
@@ -303,7 +321,8 @@ PackageTable > .table--note {
 }
 
 #upgrade {
-    width: 16;
+    width: 15;
+    margin-right: 0;
 }
 
 /* Progress screen */
@@ -572,9 +591,22 @@ ConfirmDialog {
 }
 
 #logs-top Select {
-    width: 30;
-    margin-right: 1;
+    width: 1fr;
+    max-width: 40;
     margin-top: -1;
+}
+
+#logs-actions {
+    width: 100%;
+    height: 1;
+    padding: 0 1;
+}
+
+#logs-actions Button {
+    width: auto;
+    margin-right: 1;
+    height: 1;
+    border: none;
 }
 
 #logs-path, #transcript-title {
@@ -718,5 +750,117 @@ DetailsScreen {
 
 #history-buttons Button {
     width: auto;
+    margin-right: 1;
+}
+
+/* Window sizes: section 9 of the design */
+
+#run-status {
+    display: none;
+    width: 100%;
+    height: 1;
+    padding: 0 1;
+    color: $wd-cyan;
+    text-style: bold;
+}
+
+Screen.-medium #run-name, Screen.-narrow #run-name,
+Screen.-medium #chip, Screen.-narrow #chip,
+Screen.-medium #run-count, Screen.-narrow #run-count {
+    display: none;
+}
+
+Screen.-medium #run-status, Screen.-narrow #run-status, Screen.-short #run-status {
+    display: block;
+}
+
+Screen.-medium #run-icon, Screen.-narrow #run-icon {
+    display: none;
+}
+
+Screen.-short #run-mid {
+    display: none;
+}
+
+Screen.-narrow #run-mid {
+    layout: vertical;
+    height: auto;
+}
+
+Screen.-narrow #run-meters {
+    width: 100%;
+    height: 2;
+    padding: 0;
+}
+
+Screen.-narrow #meter-speed {
+    margin-bottom: 0;
+}
+
+Screen.-narrow #meter-received, Screen.-narrow #stages {
+    display: none;
+}
+
+Screen.-narrow #run-state {
+    width: 100%;
+    height: 2;
+    padding: 0;
+}
+
+Screen.-narrow #percent {
+    margin-bottom: 0;
+}
+
+Screen.-narrow #back {
+    min-width: 5;
+    width: 5;
+}
+
+Screen.-narrow #pause {
+    width: 1fr;
+}
+
+Screen.-narrow #run-gap {
+    display: none;
+}
+
+Screen.-narrow #log-box, Screen.-narrow #queue-box {
+    width: 100%;
+    margin-right: 0;
+}
+
+Screen.-narrow .small-hide, Screen.-short .small-hide {
+    display: none;
+}
+
+Screen.-narrow #splash-row {
+    width: 100%;
+}
+
+Screen.-narrow #sources {
+    width: 1fr;
+}
+
+Screen.-narrow #splash-row Button {
+    min-width: 5;
+}
+
+Screen.-narrow .form-label {
+    width: 18;
+}
+
+ConfirmDialog.-narrow #dialog-buttons, ConfirmDialog.-short #dialog-buttons {
+    layout: vertical;
+    height: auto;
+}
+
+ConfirmDialog.-narrow #dialog-buttons Button, ConfirmDialog.-short #dialog-buttons Button {
+    width: 100%;
+    margin-left: 0;
+}
+
+Screen.-narrow #details-buttons Button {
+    min-width: 5;
+    margin-left: 0;
     margin-right: 1;
 }

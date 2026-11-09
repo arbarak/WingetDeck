@@ -8,8 +8,7 @@ from pathlib import Path
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
-from textual.screen import Screen
-from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, Select, Static
+from textual.widgets import Button, Checkbox, Footer, Input, Label, Select, Static
 
 from ...core.queue import RunState
 from ...core.safety import restart_as_admin
@@ -18,18 +17,19 @@ from ...winget.settings_file import DownloaderChange
 from ..themes import THEMES
 from ..widgets.options_form import OptionsForm
 from .dialogs import ConfirmDialog
+from .base import DeckScreen, TitleBar
 
 _MB = 1024 * 1024
 _LARGE_LOGS_MB = 500
 _DELETE = "Delete old logs"
 
 
-class SettingsScreen(Screen):
+class SettingsScreen(DeckScreen):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
 
     def compose(self) -> ComposeResult:
         s = self.app.store.load_settings()
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         with VerticalScroll(id="settings-body"):
             yield Static("Upgrade options for every package", classes="form-title")
             yield OptionsForm(s.defaults, id="defaults")

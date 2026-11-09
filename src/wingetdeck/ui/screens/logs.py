@@ -11,13 +11,13 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
-from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, OptionList, RichLog, Select, Static
+from textual.widgets import Button, Footer, OptionList, RichLog, Select, Static
 from textual.widgets.option_list import Option
 
 from ...core.logs import LogEvent, report_contents, save_diagnostic_report
 from ...winget.parse import strip_terminal_codes
 from .dialogs import ConfirmDialog
+from .base import DeckScreen, TitleBar
 
 _LEVELS = ("ALL", "INFO", "WARN", "ERROR")
 _ALL_PACKAGES = "__all__"
@@ -39,7 +39,7 @@ def _user_name() -> str:
         return ""
 
 
-class TranscriptScreen(Screen):
+class TranscriptScreen(DeckScreen):
     """Everything winget printed for one package."""
 
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
@@ -50,7 +50,7 @@ class TranscriptScreen(Screen):
         self.path = path
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         yield Static(f"winget output for {self.package_id}", id="transcript-title", markup=False)
         yield RichLog(id="transcript", wrap=True, markup=False, highlight=False)
         yield Footer()
@@ -72,7 +72,7 @@ class TranscriptScreen(Screen):
                 log.write(line)
 
 
-class LogsScreen(Screen):
+class LogsScreen(DeckScreen):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
 
     def __init__(self) -> None:
@@ -83,11 +83,12 @@ class LogsScreen(Screen):
         self._drawn: tuple = ()
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         with Horizontal(id="logs-top"):
             for level in _LEVELS:
                 yield Button(level, id=f"level-{level}", classes="blue" if level == "ALL" else "gray", compact=True)
             yield Select([("All packages", _ALL_PACKAGES)], value=_ALL_PACKAGES, allow_blank=False, id="package")
+        with Horizontal(id="logs-actions"):
             yield Button("Open logs folder", id="open-folder", classes="gray", compact=True)
             yield Button("Save diagnostic report", id="save-report", classes="gray", compact=True)
         yield Static(str(self.app.log_file.text_path), id="logs-path", markup=False)

@@ -7,8 +7,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.markup import escape
-from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Input, Static
+from textual.widgets import Button, Footer, Input, Static
 
 from ...core.queue import RunState
 from ...core.runner import RunView
@@ -16,10 +15,14 @@ from ...core.selection import merge_scan
 from ...winget.models import ChangeKind
 from ..widgets.package_table import PackageTable
 from .details import DetailsScreen
+from .base import DeckScreen, TitleBar
 
 _REFRESH_BLOCKED = "Not available during an upgrade. It comes back when the run ends or pauses between packages."
 _ACTIONS_HEIGHT = 3
 _LOG_MIN = 4
+_BARS_HEIGHT = 2
+_FILTER_HEIGHT = 3
+_ROWS_BEFORE_LOG = 10
 _LOG_LINES = 200
 
 
@@ -30,7 +33,7 @@ def run_is_active(view: RunView) -> bool:
     return view.state is RunState.PAUSED and view.active_name is not None
 
 
-class PackagesScreen(Screen):
+class PackagesScreen(DeckScreen):
     BINDINGS = [
         Binding("f5", "refresh_list", "Refresh"),
         Binding("r", "refresh_list", "Refresh", show=False),
@@ -55,7 +58,7 @@ class PackagesScreen(Screen):
 
     def compose(self) -> ComposeResult:
         ascii_mode = self.app.ascii_mode
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         with Vertical(id="packages-body"):
             yield Input(placeholder="Type to filter, Esc to clear", id="filter")
             yield PackageTable(ascii_mode=ascii_mode, id="table")
@@ -68,7 +71,7 @@ class PackagesScreen(Screen):
                 yield Button("Minor", id="select-minor", classes="gray small-hide")
                 yield Button("Patch", id="select-patch", classes="gray small-hide")
                 yield Static("", id="actions-gap")
-                yield Button("Back to the run", id="to-run", classes="gray")
+                yield Button("To run", id="to-run", classes="gray")
                 yield Button("UPGRADE", id="upgrade", disabled=True)
             with VerticalScroll(id="table-log-box"):
                 yield Static("", id="table-log")
@@ -178,16 +181,14 @@ class PackagesScreen(Screen):
             empty.update("Everything is up to date. Press Refresh to check again.")
 
     def fit_table(self) -> None:
-        """Rows take what they need and the log gets the rest, until the rows need more room."""
-        body = self.query_one("#packages-body")
+        """Rows take what they need and the log gets the rest. The log goes before the table shrinks."""
         table = self.query_one(PackageTable)
         box = self.query_one("#table-log-box")
-        spare = body.size.height - _ACTIONS_HEIGHT
-        filter_box = self.query_one("#filter", Input)
-        if filter_box.display:
-            spare -= 3
+        spare = self.size.height - _BARS_HEIGHT - _ACTIONS_HEIGHT
+        if self.query_one("#filter", Input).display:
+            spare -= _FILTER_HEIGHT
         wanted = len(table.rows) + 1
-        show_log = spare - min(wanted, 4) >= _LOG_MIN
+        show_log = spare - min(wanted, _ROWS_BEFORE_LOG) >= _LOG_MIN
         box.display = show_log
         room = spare - _LOG_MIN if show_log else spare
         table.styles.height = max(min(wanted, room), 2)

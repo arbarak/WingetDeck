@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Static
+from textual.widgets import Button, Footer, Static
+from .base import DeckScreen, TitleBar
 
 HELP = """\
 WingetDeck upgrades apps through winget, and winget could not be started on this PC.
@@ -18,13 +18,13 @@ Winget runs on Windows 10 1809 or newer and Windows 11. It cannot run on Server 
 Then press Check again. There is no need to restart this app."""
 
 
-class NoWingetScreen(Screen):
+class NoWingetScreen(DeckScreen):
     def __init__(self, reason: str | None = None) -> None:
         super().__init__()
         self.reason = reason
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         with Vertical(id="no-winget-body"):
             text = HELP if not self.reason else f"{HELP}\n\nWhat happened: {self.reason}"
             yield Static(text, id="help", markup=False)

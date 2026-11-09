@@ -8,8 +8,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
-from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, OptionList, Static
+from textual.widgets import Button, Footer, OptionList, Static
 from textual.widgets.option_list import Option
 
 from ...core.queue import RunState
@@ -17,11 +16,12 @@ from ...core.safety import rollback_target
 from ...core.store import HistoryEntry
 from .dialogs import ConfirmDialog
 from .logs import TranscriptScreen
+from .base import DeckScreen, TitleBar
 
 _ROLL_BACK = "Roll back"
 
 
-class HistoryScreen(Screen):
+class HistoryScreen(DeckScreen):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
 
     def __init__(self) -> None:
@@ -29,7 +29,7 @@ class HistoryScreen(Screen):
         self.entries: list[HistoryEntry] = []
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         yield Static("", id="history-note", markup=False)
         yield OptionList(id="history-list", markup=False)
         with Horizontal(id="history-buttons"):

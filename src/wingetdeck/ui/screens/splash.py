@@ -9,12 +9,14 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical
-from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, ListItem, ListView, Static
+from textual.widgets import Button, Footer, ListItem, ListView, Static
 
-from ..pixels import LOGO, PALETTE, PixelArt
+from ..pixels import BOX, LOGO, PALETTE, PixelArt
+from .base import DeckScreen, TitleBar
 
 _ALL_SOURCES = "All sources"
+_LOGO_FULL_ROWS = 30
+_LOGO_SMALL_ROWS = 20
 _FRIENDLY = {"msstore": "Microsoft Store only"}
 
 
@@ -28,7 +30,7 @@ class SourceList(ListView):
     BINDINGS = [Binding("enter", "screen.start", "Start", show=False)]
 
 
-class SplashScreen(Screen):
+class SplashScreen(DeckScreen):
     BINDINGS = [
         Binding("s", "start", "Start"),
         Binding("q", "app.quit", "Quit"),
@@ -40,7 +42,7 @@ class SplashScreen(Screen):
         self._notes: list[str] = []
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         with Vertical(id="splash-body"):
             with Center():
                 yield PixelArt(LOGO, PALETTE, ascii_mode=self.app.ascii_mode, id="logo")
@@ -57,7 +59,22 @@ class SplashScreen(Screen):
                 yield Static("", id="notes", markup=False)
         yield Footer()
 
+    def on_resize(self) -> None:
+        self._fit_logo()
+
+    def _fit_logo(self) -> None:
+        """The logo shrinks, then goes, on a short window."""
+        logo = self.query_one("#logo", PixelArt)
+        height = self.size.height
+        logo.parent.display = height >= _LOGO_SMALL_ROWS
+        logo.display = height >= _LOGO_SMALL_ROWS
+        wanted = LOGO if height >= _LOGO_FULL_ROWS else BOX
+        if logo.art is not wanted:
+            logo.art = wanted
+            logo.refresh(layout=True)
+
     def on_mount(self) -> None:
+        self._fit_logo()
         self.query_one("#sources", SourceList).index = 0
         data = self.app.log_file.data_dir
         if not data.portable:

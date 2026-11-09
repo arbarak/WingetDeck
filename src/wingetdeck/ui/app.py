@@ -20,6 +20,7 @@ from ..core.store import HistoryEntry, Store
 from ..paths import is_elevated
 from ..winget.backend import UpgradeOptions, WingetBackend
 from ..winget.models import ChangeKind, Package
+from .responsive import MEDIUM, WIDE, taskbar_code, title_text
 from .screens.dialogs import ConfirmDialog
 from .screens.history import HistoryScreen
 from .screens.logs import LogsScreen
@@ -49,6 +50,8 @@ _DISCARD = "Don't resume"
 class WingetDeckApp(App):
     TITLE = "WingetDeck — Package Upgrader"
     CSS_PATH = Path(__file__).parent / "app.tcss"
+    HORIZONTAL_BREAKPOINTS = [(0, "-narrow"), (MEDIUM, "-medium"), (WIDE, "-wide")]
+    VERTICAL_BREAKPOINTS = [(0, "-short"), (20, "-compact"), (30, "-tall")]
     BINDINGS = [
         Binding("l", "show_logs", "Logs"),
         Binding("t", "show_settings", "Settings"),
@@ -70,6 +73,8 @@ class WingetDeckApp(App):
         self.ascii_mode = ascii_mode
         self._run_listeners: list[Callable[[RunView], None]] = []
         self._resume_offered = False
+        self._last_title = ""
+        self._last_taskbar = ""
         super().__init__()
         runner.on_change = self._run_changed
         self.sub_title = f"v{__version__}"
@@ -83,6 +88,7 @@ class WingetDeckApp(App):
 
     def on_mount(self) -> None:
         self.backend.accept_source_agreements = self.store.load_settings().consented_agreements
+        self._show_on_taskbar(None)
         self.push_screen(SplashScreen())
 
     def add_run_listener(self, listener: Callable[[RunView], None]) -> None:
@@ -95,6 +101,24 @@ class WingetDeckApp(App):
     def _run_changed(self, view: RunView) -> None:
         for listener in list(self._run_listeners):
             listener(view)
+        self._show_on_taskbar(view)
+
+    def write_terminal(self, text: str) -> None:
+        if self._driver is not None:
+            self._driver.write(text)
+
+    def _show_on_taskbar(self, view: RunView | None) -> None:
+        """The window title and taskbar button show progress while minimised."""
+        title, code = title_text(view), taskbar_code(view)
+        if title != self._last_title:
+            self._last_title = title
+            self.write_terminal(f"\x1b]0;{title}\x07")
+        if code != self._last_taskbar:
+            self._last_taskbar = code
+            self.write_terminal(code)
+
+    def on_unmount(self) -> None:
+        self._show_on_taskbar(None)
 
     def show_packages(self, source: str | None) -> None:
         self.log_file.info("Source chosen", source=source or "all")

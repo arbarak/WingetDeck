@@ -10,16 +10,17 @@ from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, RichLog, Static
+from textual.widgets import Button, Footer, RichLog, Static
 
 from ...core.queue import ItemState, RunState
 from ...core.runner import RunView
 from ...winget.models import Stage
 from ..pixels import BOX, PixelArt
+from ..responsive import layout_band
 from ..widgets.meters import Meter, PercentBar, StageList, clock
 from ..widgets.queue_panel import QueuePanel
 from .dialogs import ConfirmDialog
+from .base import DeckScreen, TitleBar
 
 STOP_AFTER = "Stop after this one"
 STOP_NOW = "Stop now"
@@ -51,7 +52,7 @@ def _plural(count: int, one: str, many: str) -> str:
     return f"{count} {one if count == 1 else many}"
 
 
-class ProgressScreen(Screen):
+class ProgressScreen(DeckScreen):
     AUTO_FOCUS = "#pause"
     BINDINGS = [
         Binding("p", "pause_resume", "Pause/Resume"),
@@ -66,10 +67,11 @@ class ProgressScreen(Screen):
         self._last_sample = 0.0
         self._notice = ""
         self._icon_done = False
+        self._tab = "log"
 
     def compose(self) -> ComposeResult:
         ascii_mode = self.app.ascii_mode
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         with Horizontal(id="run-top"):
             yield Button("< Packages" if ascii_mode else "‹ Packages", id="back", classes="gray")
             yield Static("", id="run-name", markup=False)
@@ -79,6 +81,7 @@ class ProgressScreen(Screen):
             yield Button("Pause", id="pause", classes="blue")
             yield Button("Stop" if ascii_mode else "■ Stop", id="stop", classes="red")
             yield Button("Retry failed", id="retry")
+        yield Static("", id="run-status", markup=False)
         with Horizontal(id="run-mid"):
             with Vertical(id="run-icon"):
                 yield PixelArt(BOX, _ICON_PALETTE, ascii_mode=ascii_mode, id="package-icon")
@@ -103,12 +106,26 @@ class ProgressScreen(Screen):
                 yield QueuePanel(ascii_mode, id="queue")
         yield Footer()
 
+    def on_resize(self) -> None:
+        self._fit()
+
+    def _fit(self) -> None:
+        narrow = layout_band(self.size.width) == "narrow"
+        self.query_one("#run-tabs").display = narrow
+        if narrow:
+            self.set_tab(self._tab)
+        else:
+            self.query_one("#log-box").display = True
+            self.query_one("#queue-box").display = True
+        arrow = "<" if self.app.ascii_mode else "‹"
+        self.query_one("#back", Button).label = arrow if narrow else f"{arrow} Packages"
+
     def on_mount(self) -> None:
         self.query_one("#summary").display = False
         self.query_one("#item-notes").display = False
         self.query_one("#notice").display = False
         self.query_one("#retry").display = False
-        self.query_one("#run-tabs").display = False
+        self._fit()
         self.set_interval(_ANIMATION_SECONDS, self.query_one(PercentBar).tick)
         self.app.add_run_listener(self.on_run_view)
         self.on_run_view(self.app.runner.view)
@@ -153,6 +170,10 @@ class ProgressScreen(Screen):
         total = len(view.items)
         finished = sum(1 for i in view.items if i.state not in (ItemState.WAITING, ItemState.ACTIVE))
         self.query_one("#run-count", Static).update(f"{finished}/{total}  {clock(view.elapsed_s)}")
+        percent = f"{view.progress.percent:.0f}%  " if view.progress and view.progress.percent is not None else ""
+        self.query_one("#run-status", Static).update(
+            f"{name}  {text}  {percent}{finished}/{total}  {clock(view.elapsed_s)}"
+        )
         running = view.state in (RunState.RUNNING, RunState.PAUSED)
         pause = self.query_one("#pause", Button)
         stop = self.query_one("#stop", Button)
@@ -262,6 +283,7 @@ class ProgressScreen(Screen):
                 self.set_tab("queue")
 
     def set_tab(self, name: str) -> None:
+        self._tab = name
         self.query_one("#log-box").display = name == "log"
         self.query_one("#queue-box").display = name == "queue"
         self.query_one("#tab-log").set_classes("blue" if name == "log" else "gray")

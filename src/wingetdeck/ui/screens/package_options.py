@@ -7,14 +7,14 @@ from dataclasses import replace
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
-from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Static
+from textual.widgets import Button, Footer, Static
 
 from ...winget.models import Package
 from ..widgets.options_form import OptionsForm
+from .base import DeckScreen, TitleBar
 
 
-class PackageOptionsScreen(Screen):
+class PackageOptionsScreen(DeckScreen):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
 
     def __init__(self, package: Package) -> None:
@@ -24,7 +24,7 @@ class PackageOptionsScreen(Screen):
     def compose(self) -> ComposeResult:
         settings = self.app.store.load_settings()
         options = settings.per_package.get(self.package.id, settings.defaults)
-        yield Header(show_clock=True, icon="○")
+        yield TitleBar()
         with VerticalScroll(id="settings-body"):
             yield Static(f"Options for {self.package.name}", classes="form-title", markup=False)
             yield OptionsForm(options, id="package-form")

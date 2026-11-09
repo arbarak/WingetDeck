@@ -173,3 +173,37 @@ def test_logo_is_original_box_and_arrow_in_half_blocks():
 def test_pixel_art_ascii_mode_has_only_ascii():
     lines = PixelArt(LOGO, PALETTE, ascii_mode=True).to_plain()
     assert all(line.isascii() for line in lines) and any("#" in line for line in lines)
+
+
+async def test_title_bar_shows_title_and_clock(make_app):
+    from wingetdeck.ui.screens.base import TitleBar
+
+    app = make_app()
+    async with app.run_test(size=(100, 30)) as pilot:
+        await pilot.pause()
+        line = str(app.screen.query_one(TitleBar).render())
+        assert "WingetDeck" in line and line.rstrip()[-3] == ":" and len(line) <= 100
+
+
+async def test_title_bar_keeps_the_whole_clock_at_the_smallest_window(make_app):
+    from wingetdeck.ui.screens.base import TitleBar
+
+    app = make_app()
+    async with app.run_test(size=(50, 16)) as pilot:
+        await pilot.pause()
+        line = str(app.screen.query_one(TitleBar).render())
+        assert len(line) <= 50
+        assert line.endswith(" ") and line[-4] == ":" and line[-7] == ":", repr(line)
+
+
+async def test_quitting_right_after_a_run_starts_does_not_crash(make_app):
+    from dataclasses import replace
+
+    app = make_app(FakeBackend(demo_packages(), speed=2))
+    app.store.save_settings(replace(app.store.load_settings(), asked_agreements=True))
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.start_upgrade(demo_packages()[:1])
+        await pilot.pause(0.01)
+        await app.action_quit()
+    assert app._exception is None
