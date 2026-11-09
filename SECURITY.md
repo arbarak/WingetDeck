@@ -23,6 +23,7 @@ Only the latest release gets fixes.
 - It has no network code of its own. All downloads are done by winget.
 - It sends no data anywhere. Logs stay in its data folder until you share them.
 - When running as administrator, it ignores the folder beside the exe and uses your profile folder.
+- It finds winget on the PATH or in Windows' own folder for it, and never runs a `winget.exe` from the current folder.
 - Winget's arguments are passed as a list, with no shell, and package ids from saved files are checked before use.
 
 ## Checking a download

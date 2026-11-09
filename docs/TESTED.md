@@ -41,7 +41,7 @@ against the pretend winget in tests.
 
 ### Automated suite
 
-`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 534 passed at v1.0.1. A test
+`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 541 passed at v1.0.1. A test
 marked `real` reads the real winget (passed) and one marked `real_download` downloads a package; both run only on
 request, and `real_download` was not rerun on the final code.
 
@@ -59,7 +59,7 @@ See `docs/spikes/2026-11-09-sandbox-results.md`. These tested winget itself, bef
 ### The built exes
 
 Each was run on the owner's PC, in a pseudo console with no window on the desktop. Version 1.0.1 builds:
-`dist\2026-11-09\154416\WingetDeck-x64.exe` and `dist\2026-11-09\WingetDeck-x86.exe`.
+`dist\2026-11-09\162720\WingetDeck-x64.exe` and `dist\2026-11-09\162808\WingetDeck-x86.exe`.
 
 | Check | x64 | x86 |
 |---|---|---|
@@ -110,13 +110,30 @@ in a screenshot.
 | Consolas, real winget, scan only | x64, x86 | Table | Real upgrades listed |
 | Mouse clicks, demo | x64 | Tick a row, press UPGRADE, finish a run | All work. The clicks were sent as window messages, not by a physical mouse |
 
-The Consolas row with all the screens used a build from just before the footer and Settings layout fixes. The final build
-was then checked on its table, settings and downloading screens. This console's own font list was measured with Windows'
+The window checks used a build from just before the winget lookup fixes, which change no screen. The Consolas row with
+all the screens came from a build before the footer and Settings layout fixes, and its table, settings and downloading
+screens were then checked again. This console's own font list was measured with Windows'
 font functions: Consolas lacks 27 of the symbols the app can use, Lucida Console 40 and Courier New 39.
 
 An automatic test also walks every screen in a real pseudo console, reads every character the app sends, and checks each
 against the real fonts. Those three fonts are what it checks; a console set to some other font is handled by the same
 check when the app runs, but has not been looked at.
+
+### A PC without winget, simulated
+
+Both final exes ran in a pseudo console with the real winget hidden, by giving them a PATH without its folder. A copy of
+the exe stood in for winget, because it answers `--version`. The previous build failed the two checks marked below, which
+shows the test can catch them.
+
+| Check | x64 | x86 |
+|---|---|---|
+| No winget: the help screen appears, with no crash | Pass | Pass |
+| A `winget.exe` in the current folder is not run (previous build ran it) | Pass | Pass |
+| Check again with still no winget: the help screen again | Pass | Pass |
+| Check again after winget appears: it is found and run (previous build did not find it) | Pass | Pass |
+
+No PC that really lacks winget has been tried. Nor has a PC where App Installer is present but not yet set up for the
+user, or one that has never accepted winget's source agreements.
 
 ### Other direct checks
 

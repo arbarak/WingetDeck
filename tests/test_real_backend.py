@@ -1,4 +1,5 @@
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from wingetdeck.winget.backend import (
 from wingetdeck.winget.capabilities import detect_capabilities, parse_flags
 from wingetdeck.winget.models import ChangeKind, Package, Stage
 from wingetdeck.winget.parse import parse_show, parse_table_column, parse_versions
-from wingetdeck.winget.real import RealBackend, build_upgrade_args, resolve_truncated
+from wingetdeck.winget.real import RealBackend, WingetError, build_upgrade_args, find_winget, resolve_truncated
 from wingetdeck.winget.stream import UpgradeStream
 
 FIX = Path(__file__).parent / "fixtures"
@@ -241,3 +242,62 @@ def test_output_after_the_app_loop_closed_is_ignored(tmp_data):
     handle._queue = asyncio.Queue()
     loop.close()
     handle._worker()
+
+
+def _winget_in(folder):
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "winget.exe").write_bytes(b"")
+    return str(folder / "winget.exe")
+
+
+def test_winget_is_found_on_the_path(tmp_path):
+    found = _winget_in(tmp_path / "tools")
+    assert find_winget({"PATH": str(tmp_path / "tools")}) == found
+
+
+def test_winget_off_the_path_is_found_where_windows_keeps_it(tmp_path):
+    found = _winget_in(tmp_path / "Microsoft" / "WindowsApps")
+    assert find_winget({"PATH": str(tmp_path / "empty"), "LOCALAPPDATA": str(tmp_path)}) == found
+
+
+def test_no_winget_anywhere_finds_nothing(tmp_path):
+    assert find_winget({"PATH": str(tmp_path), "LOCALAPPDATA": str(tmp_path)}) is None
+
+
+def test_a_winget_exe_in_the_current_folder_is_never_run(tmp_path, monkeypatch):
+    """Double-clicking the exe in Downloads makes that the current folder, and anything can land in Downloads."""
+    _winget_in(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert find_winget({"PATH": ".;", "LOCALAPPDATA": str(tmp_path / "none")}) is None
+
+
+def test_check_again_finds_winget_installed_after_the_app_started(tmp_data, tmp_path, monkeypatch):
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    backend = RealBackend(SessionLog(tmp_data, False, {}))
+    assert backend.winget is None
+
+    found = _winget_in(tmp_path / "local" / "Microsoft" / "WindowsApps")
+    backend.refresh_capabilities()
+    assert backend.winget == found
+
+
+def test_a_path_given_by_the_caller_survives_check_again(tmp_data):
+    backend = RealBackend(SessionLog(tmp_data, False, {}), winget_path="C:/chosen/winget.exe")
+    backend.refresh_capabilities()
+    assert backend.winget == "C:/chosen/winget.exe"
+
+
+def test_a_hung_winget_gives_up_soon_and_says_so(tmp_data, monkeypatch):
+    backend = RealBackend(SessionLog(tmp_data, False, {}), winget_path="winget")
+    waited = []
+
+    def hang(command, **kw):
+        waited.append(kw["timeout"])
+        raise subprocess.TimeoutExpired(command, kw["timeout"])
+
+    monkeypatch.setattr(subprocess, "run", hang)
+    with pytest.raises(WingetError, match="did not answer"):
+        backend.capabilities()
+    assert waited == [real._PROBE_TIMEOUT]
+    assert real._PROBE_TIMEOUT <= 60

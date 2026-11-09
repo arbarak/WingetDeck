@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-import shutil
+import os
 import subprocess
 import tempfile
 import threading
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import replace
 from pathlib import Path
 
@@ -30,6 +30,7 @@ from .settings_file import DownloaderChange, default_settings_path, enable_direc
 from .stream import UpgradeStream
 
 _QUERY_TIMEOUT = 600
+_PROBE_TIMEOUT = 60  # only asks for the version and the help text, so a longer wait means it has hung
 _PTY_SIZE = (30, 200)
 _CONSOLE_HOSTS = {"conhost.exe", "openconsole.exe"}
 _NOTHING_TO_UPGRADE = {0x8A150014, 0x8A15002B}
@@ -204,26 +205,49 @@ class RealHandle:
         return result
 
 
+def find_winget(environ: Mapping[str, str] | None = None) -> str | None:
+    """The PATH, then where Windows keeps winget for this user, which can be missing from the PATH.
+
+    Never the current folder. shutil.which looks there first, and double-clicking the exe in Downloads makes
+    Downloads the current folder, so any winget.exe that landed there would be run.
+    """
+    env = os.environ if environ is None else environ
+    folders = [f.strip('"') for f in env.get("PATH", "").split(os.pathsep)]
+    folders = [f for f in folders if os.path.isabs(f)]
+    if env.get("LOCALAPPDATA"):
+        folders.append(os.path.join(env["LOCALAPPDATA"], "Microsoft", "WindowsApps"))
+    for folder in folders:
+        candidate = os.path.join(folder, "winget.exe")
+        if os.path.lexists(candidate):  # an app alias is a special link that a normal check can fail to follow
+            return candidate
+    return None
+
+
 class RealBackend:
     def __init__(self, log: SessionLog, winget_path: str | None = None, force_piped: bool = False) -> None:
         self._log = log
-        self.winget = winget_path or shutil.which("winget")
+        self._given_path = winget_path
+        self.winget = winget_path or find_winget()
         self._force_piped = force_piped
         self.accept_source_agreements = False
         self._caps: Capabilities | None = None
 
-    def _run_sync(self, args: list[str]) -> subprocess.CompletedProcess:
+    def _run_sync(self, args: list[str], timeout: int = _QUERY_TIMEOUT) -> subprocess.CompletedProcess:
         if not self.winget:
             raise FileNotFoundError("winget")
         return subprocess.run(
             [self.winget, *args],
             stdin=subprocess.DEVNULL,
             capture_output=True,
-            timeout=_QUERY_TIMEOUT,
+            timeout=timeout,
         )
 
     def _text_sync(self, args: list[str]) -> str:
-        return self._run_sync(args).stdout.decode("utf-8", errors="replace")
+        try:
+            done = self._run_sync(args, timeout=_PROBE_TIMEOUT)
+        except subprocess.TimeoutExpired as e:
+            raise WingetError(f"winget did not answer within {_PROBE_TIMEOUT} seconds") from e
+        return done.stdout.decode("utf-8", errors="replace")
 
     async def _query(self, args: list[str], check: bool = True) -> str:
         full = list(args)
@@ -260,6 +284,7 @@ class RealBackend:
 
     def refresh_capabilities(self) -> None:
         self._caps = None
+        self.winget = self._given_path or find_winget()  # it may have been installed since the last look
 
     async def sources(self) -> list[str]:
         return parse_table_column(await self._query(["source", "list"]), 0)

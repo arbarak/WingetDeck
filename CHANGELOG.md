@@ -20,6 +20,15 @@ classic Windows console, whose fonts have far fewer symbols than Windows Termina
 | The last key in the footer cut off at the standard window size | All the keys fit. `Ctrl+P` still opens the palette on that screen |
 | Settings checkboxes of different widths | They line up |
 
+Also found while checking PCs without winget:
+
+| What was wrong | What happens now |
+|---|---|
+| **Security:** a file called `winget.exe` in the folder the app was started from would be run in place of the real winget | The app never looks in the current folder for winget |
+| Check again could not see a winget installed after the app started, despite saying no restart was needed | It looks again each time |
+| A winget that was installed but missing from the PATH was reported as not installed | The app also looks where Windows keeps winget |
+| A hung winget left the start screen waiting for up to 10 minutes | The app gives up after a minute and says why |
+
 ### Added
 
 - `--basic` asks for the reduced symbols by hand, if your console shows boxes that the app did not catch.
