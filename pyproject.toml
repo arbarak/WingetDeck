@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wingetdeck"
+description = "Clickable terminal app for winget upgrades"
+requires-python = ">=3.12"
+dynamic = ["version"]
+dependencies = [
+    "textual>=8.2,<9",
+    "pywinpty>=3.1,<4; platform_machine != 'x86'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "pyinstaller>=6.22,<7", "psutil>=6"]
+
+[project.scripts]
+wingetdeck = "wingetdeck.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "wingetdeck.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+wingetdeck = ["ui/*.tcss"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-m 'not real and not real_download'"
+markers = [
+    "real: reads from the real winget, changes nothing",
+    "real_download: downloads a real package to a temp folder",
+]

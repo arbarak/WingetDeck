@@ -1,0 +1,10 @@
+.sandbox/
+.venv/
+.venv-x86/
+build/
+dist/
+WingetDeck-data/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
