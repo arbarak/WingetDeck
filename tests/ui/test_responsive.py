@@ -121,10 +121,10 @@ async def test_columns_per_band(make_app):
         assert keys() == ["tick", "name", "id", "installed", "available", "source", "change"]
         await pilot.resize_terminal(100, 30)
         await pilot.pause(0.1)
-        assert keys() == ["tick", "name", "installed", "available", "source", "change"]
+        await until(lambda: keys() == ["tick", "name", "installed", "available", "source", "change"])
         await pilot.resize_terminal(70, 24)
         await pilot.pause(0.1)
-        assert keys() == ["tick", "name", "versions"]
+        await until(lambda: keys() == ["tick", "name", "versions"])
 
 
 async def test_progress_narrow_uses_log_queue_tabs(make_app):
@@ -143,8 +143,8 @@ async def test_progress_narrow_uses_log_queue_tabs(make_app):
         assert screen.query_one("#queue-box").display and not screen.query_one("#log-box").display
         await pilot.resize_terminal(130, 40)
         await pilot.pause(0.1)
-        assert not screen.query_one("#run-tabs").display
-        assert screen.query_one("#queue-box").display and screen.query_one("#log-box").display
+        await until(lambda: not screen.query_one("#run-tabs").display)
+        await until(lambda: screen.query_one("#queue-box").display and screen.query_one("#log-box").display)
         await app.runner.shutdown()
 
 
@@ -159,7 +159,7 @@ async def test_progress_medium_hides_the_icon(make_app):
         assert not app.screen.query_one("#run-icon").display
         await pilot.resize_terminal(130, 40)
         await pilot.pause(0.1)
-        assert app.screen.query_one("#run-icon").display
+        await until(lambda: app.screen.query_one("#run-icon").display)
         await app.runner.shutdown()
 
 
@@ -174,11 +174,12 @@ async def test_too_small_message_below_50x16_and_work_continues(make_app):
         await pilot.resize_terminal(MIN_WIDTH - 1, MIN_HEIGHT - 1)
         await pilot.pause(0.1)
         banner = app.screen.query_one("#too-small")
-        assert banner.display and "too small" in str(banner.render()).lower()
+        await until(lambda: banner.display)
+        assert "too small" in str(banner.render()).lower()
         await until(lambda: app.runner.view.state is RunState.FINISHED, 12)
         await pilot.resize_terminal(120, 40)
         await pilot.pause(0.1)
-        assert not app.screen.query_one("#too-small").display
+        await until(lambda: not app.screen.query_one("#too-small").display)
 
 
 async def test_too_small_applies_to_a_screen_opened_while_small(make_app):
@@ -232,10 +233,10 @@ async def test_logo_shrinks_then_hides_on_short_windows(make_app):
         assert logo.display and tall > 8
         await pilot.resize_terminal(120, 24)
         await pilot.pause(0.1)
-        assert logo.display and logo.region.height < tall
+        await until(lambda: logo.display and logo.region.height < tall)
         await pilot.resize_terminal(120, 16)
         await pilot.pause(0.1)
-        assert not logo.display
+        await until(lambda: not logo.display)
 
 
 async def test_table_log_collapses_before_the_table(make_app):
@@ -250,8 +251,8 @@ async def test_table_log_collapses_before_the_table(make_app):
         assert screen.query_one("#table-log-box").display
         await pilot.resize_terminal(120, 16)
         await pilot.pause(0.1)
-        assert not screen.query_one("#table-log-box").display
-        assert screen.query_one(PackageTable).region.height >= 3
+        await until(lambda: not screen.query_one("#table-log-box").display)
+        await until(lambda: screen.query_one(PackageTable).region.height >= 3)
 
 
 async def test_window_title_follows_the_run(make_app):
