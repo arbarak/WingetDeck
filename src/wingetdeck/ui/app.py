@@ -9,12 +9,14 @@ from textual.app import App
 
 from .. import __version__
 from ..core.logs import SessionLog
+from ..core.queue import ItemState
 from ..core.runner import Runner, RunView
 from ..core.store import Store
-from ..winget.backend import WingetBackend
+from ..winget.backend import UpgradeOptions, WingetBackend
 from ..winget.models import Package
 from .screens.no_winget import NoWingetScreen
 from .screens.packages import PackagesScreen
+from .screens.progress import ProgressScreen
 from .screens.splash import SplashScreen
 from .themes import DEFAULT_THEME, DEFAULT_VARIABLES, THEMES
 
@@ -68,9 +70,38 @@ class WingetDeckApp(App):
 
     def start_upgrade(self, packages: list[Package]) -> None:
         self.log_file.info("Upgrade requested", packages=[p.id for p in packages])
+        self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+
+    def options_for(self, package: Package) -> UpgradeOptions:
+        settings = self.store.load_settings()
+        return settings.per_package.get(package.id, settings.defaults)
+
+    async def _begin_run(self, packages: list[Package]) -> None:
+        try:
+            await self.runner.start(packages, self.options_for)
+        except RuntimeError as e:
+            self.log_file.warn("Run not started", error=str(e))
+            self.notify(str(e), severity="warning")
+            return
+        screen = self.progress_screen()
+        if screen.is_mounted:
+            screen.new_run()
+        self.show_progress()
+
+    def progress_screen(self) -> ProgressScreen:
+        if not self.is_screen_installed("progress"):
+            self.install_screen(ProgressScreen(), "progress")
+        return self.get_screen("progress")
 
     def show_progress(self) -> None:
-        pass
+        screen = self.progress_screen()
+        if self.screen is not screen:
+            self.push_screen(screen)
+
+    def retry_failed(self) -> None:
+        failed = [i.package for i in self.runner.view.items if i.state is ItemState.FAILED]
+        if failed:
+            self.start_upgrade(failed)
 
     def show_no_winget(self, reason: str | None = None) -> None:
         self.switch_screen(NoWingetScreen(reason))

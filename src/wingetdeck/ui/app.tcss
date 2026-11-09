@@ -52,7 +52,7 @@ Button:hover {
 }
 
 Button:focus {
-    text-style: bold reverse;
+    text-style: bold underline;
 }
 
 Button.-active {
@@ -304,4 +304,253 @@ PackageTable > .table--note {
 
 #upgrade {
     width: 16;
+}
+
+/* Progress screen */
+
+#run-top {
+    width: 100%;
+    height: 3;
+}
+
+#run-top Button {
+    margin-right: 1;
+    width: auto;
+}
+
+#run-name {
+    width: auto;
+    max-width: 34;
+    height: 3;
+    padding: 1 2;
+    background: $wd-blue;
+    color: white;
+    text-style: bold;
+    margin-right: 1;
+}
+
+#chip {
+    width: auto;
+    height: 1;
+    margin: 1 1 0 0;
+    padding: 0 1;
+    text-style: bold;
+}
+
+#chip.chip-busy {
+    background: $wd-cyan;
+    color: black;
+}
+
+#chip.chip-hold {
+    background: $wd-minor;
+    color: black;
+}
+
+#chip.chip-good {
+    background: $wd-lime;
+    color: black;
+}
+
+#chip.chip-bad {
+    background: $wd-major;
+    color: black;
+}
+
+#run-count {
+    width: auto;
+    height: 1;
+    margin-top: 1;
+    color: $wd-dim;
+}
+
+#run-gap {
+    width: 1fr;
+    height: 1;
+}
+
+#run-mid {
+    width: 100%;
+    height: 8;
+    padding: 0 1;
+}
+
+#run-icon {
+    width: 18;
+    height: 8;
+}
+
+#run-meters {
+    width: 1fr;
+    height: 8;
+    padding: 1 2 0 0;
+}
+
+#meter-speed {
+    color: $wd-cyan;
+    margin-bottom: 1;
+}
+
+#meter-received {
+    color: $secondary;
+}
+
+#run-state {
+    width: 34;
+    height: 8;
+    padding-top: 1;
+}
+
+#percent {
+    color: $wd-lime;
+    margin-bottom: 1;
+}
+
+#stages {
+    color: $wd-dim;
+}
+
+#summary {
+    width: 100%;
+    height: auto;
+    padding: 0 1;
+    color: $wd-lime;
+    text-style: bold;
+}
+
+#item-notes {
+    width: 100%;
+    height: auto;
+    max-height: 5;
+    padding: 0 1;
+    color: $wd-major;
+}
+
+#notice {
+    width: 100%;
+    height: auto;
+    padding: 0 1;
+    color: $warning;
+}
+
+#run-tabs {
+    width: 100%;
+    height: 1;
+    padding: 0 1;
+}
+
+#run-tabs Button {
+    margin-right: 1;
+    min-width: 8;
+}
+
+#run-bottom {
+    width: 100%;
+    height: 1fr;
+    padding: 0 1;
+}
+
+#log-box {
+    width: 3fr;
+    height: 100%;
+    border: solid $wd-cyan;
+    border-title-color: $wd-cyan;
+    border-title-style: bold;
+    margin-right: 1;
+}
+
+#queue-box {
+    width: 2fr;
+    height: 100%;
+    border: solid $wd-cyan;
+    border-title-color: $wd-cyan;
+    border-title-style: bold;
+}
+
+#run-log {
+    background: $background;
+    scrollbar-size-vertical: 1;
+}
+
+#queue {
+    scrollbar-size-vertical: 1;
+}
+
+.queue-row {
+    width: 100%;
+    height: 1;
+}
+
+.queue-name {
+    width: 1fr;
+    height: 1;
+}
+
+.state-active {
+    color: $wd-cyan;
+    text-style: bold;
+}
+
+.state-done, .state-done_restart {
+    color: $wd-lime;
+}
+
+.state-failed {
+    color: $wd-major;
+}
+
+.state-stopped, .state-skipped {
+    color: $wd-dim;
+}
+
+Button.queue-button {
+    width: 3;
+    min-width: 3;
+    height: 1;
+    margin-left: 1;
+    background: $wd-gray;
+    color: $foreground;
+    border: none;
+}
+
+Button.queue-remove {
+    background: $wd-red;
+    color: white;
+}
+
+/* Dialogs */
+
+ConfirmDialog {
+    align: center middle;
+    background: black 70%;
+}
+
+#dialog {
+    width: 76;
+    max-width: 95%;
+    height: auto;
+    max-height: 95%;
+    background: $surface;
+    border: solid $wd-red;
+    padding: 1 2;
+}
+
+#dialog-title {
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#dialog-text {
+    margin-bottom: 1;
+}
+
+#dialog-buttons {
+    width: 100%;
+    height: auto;
+    align-horizontal: right;
+}
+
+#dialog-buttons Button {
+    width: auto;
+    margin-left: 1;
 }

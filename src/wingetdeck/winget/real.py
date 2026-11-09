@@ -26,6 +26,7 @@ from .codes import explain
 from .models import Package, ScanResult
 from .parse import parse_show, parse_table_column, parse_upgrade_table, parse_versions
 from .proc import KillResult, freeze_tree, kill_tree, thaw_tree, tree_names
+from .settings_file import DownloaderChange, default_settings_path, enable_direct, undo
 from .stream import UpgradeStream
 
 _QUERY_TIMEOUT = 600
@@ -327,6 +328,18 @@ class RealBackend:
 
     async def pin_remove(self, package_id: str) -> None:
         await self._query(["pin", "remove", "--id", package_id, "-e"])
+
+    def enable_direct_downloader(self, backups: Path) -> DownloaderChange:
+        """Only called after the user has agreed: this is the one thing that changes winget itself."""
+        change = enable_direct(default_settings_path(), backups)
+        self._log.warn("winget downloader changed to wininet", backup=str(change.backup))
+        self.refresh_capabilities()
+        return change
+
+    def undo_direct_downloader(self, change: DownloaderChange) -> None:
+        undo(default_settings_path(), change)
+        self._log.warn("winget downloader setting restored")
+        self.refresh_capabilities()
 
     async def info_text(self) -> str:
         return await asyncio.to_thread(self._text_sync, ["--info"])

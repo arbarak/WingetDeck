@@ -48,6 +48,7 @@ class PackagesScreen(Screen):
         self._first_scan = True
         self._scanning = False
         self._log_lines: list[str] = []
+        self._run_was_active = False
 
     def compose(self) -> ComposeResult:
         ascii_mode = self.app.ascii_mode
@@ -202,11 +203,16 @@ class PackagesScreen(Screen):
         refresh.tooltip = _REFRESH_BLOCKED if blocked else "Update winget's sources, then check again"
 
     def on_run_view(self, view: RunView) -> None:
-        if not self.is_mounted:
+        if not self.query("#to-run"):
             return
         self._update_refresh()
         unfinished = view.state in (RunState.RUNNING, RunState.PAUSED)
         self.query_one("#to-run", Button).display = unfinished
+        if unfinished:
+            self._run_was_active = True
+        elif self._run_was_active and view.state is RunState.FINISHED:
+            self._run_was_active = False
+            self.scan_packages(update_sources=False)
 
     # Controls
 

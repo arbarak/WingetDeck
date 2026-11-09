@@ -23,12 +23,13 @@ from ..winget.codes import Outcome, explain
 from ..winget.models import Package, Progress, Stage
 from ..winget.proc import KillResult
 from .logs import SessionLog
-from .queue import Controls, Effect, ItemState, RunItem, RunQueue, RunState
+from .queue import Controls, Effect, ItemState, RunItem, RunQueue, RunState, Summary
 from .store import HistoryEntry, Store
 
 _LOST_EXIT = 1
 _SPEED_SAMPLES = 8
 _SHUTDOWN_WAIT_SECONDS = 5
+_OUTPUT_KEPT = 300
 _FAILURES = {Outcome.FAILED, Outcome.FAILED_IN_USE, Outcome.FAILED_RESTART_FIRST}
 _DENIED_MESSAGE = (
     "Windows would not let this app stop the installer, because it is running as administrator. "
@@ -48,6 +49,10 @@ class RunView:
     stalled: bool = False
     controls: Controls = Controls("Pause", False, ())
     last_error: str | None = None
+    summary: Summary | None = None
+    output: tuple[tuple[str, str], ...] = ()
+    output_total: int = 0
+    direct_downloader: bool = False
 
 
 class Runner:
@@ -85,6 +90,8 @@ class Runner:
         self._retried = False
         self._kill_sent = False
         self._closing = False
+        self._output: deque[tuple[str, str]] = deque(maxlen=_OUTPUT_KEPT)
+        self._output_total = 0
 
     # What the screens read
 
@@ -106,7 +113,15 @@ class Runner:
             stalled=self._stalled,
             controls=q.controls(),
             last_error=self._last_error,
+            summary=q.summary(),
+            output=tuple(self._output),
+            output_total=self._output_total,
+            direct_downloader=q.direct_downloader,
         )
+
+    def _line(self, text: str) -> None:
+        self._output.append((datetime.now().strftime("%H:%M:%S"), text))
+        self._output_total += 1
 
     def _speed(self) -> float | None:
         """Measured from the megabytes winget reports. No numbers means no speed, never a guess."""
@@ -192,6 +207,7 @@ class Runner:
         self._reset_for_package()
         self._was_frozen = False
         self._retried = False
+        self._line(f"Upgrading {item.package.name}")
         while True:
             code = await self._one_attempt(item)
             if self._closing:
@@ -202,6 +218,7 @@ class Runner:
                                code=explain(code).hex_code)
                 self._reset_for_package()
                 self._queue.restart_active()
+                self._line(f"{item.package.name}: the download failed after the pause, trying once more")
                 self._notify()
                 continue
             break
@@ -235,6 +252,8 @@ class Runner:
                 self._notify()
             elif isinstance(event, OutputEvent):
                 self._on_activity()
+                self._line(event.line)
+                self._notify()
             elif isinstance(event, FinishedEvent):
                 code = event.exit_code
         return code
@@ -270,6 +289,9 @@ class Runner:
         self._samples.clear()
         self._stalled = False
         self._history(item)
+        said = item.message or item.state.value
+        ok = item.state is ItemState.DONE
+        self._line(f"{item.package.name}: {said}" if ok else f"{item.package.name}: {said} ({item.code})")
         self._changed()
 
     def _history(self, item: RunItem) -> None:
@@ -333,6 +355,22 @@ class Runner:
             self._wake.set()
         self._log.info("Resume pressed", effect=effect.value)
         self._changed()
+
+    def move_item(self, package_id: str, delta: int) -> bool:
+        moved = self._queue is not None and self._queue.move(package_id, delta)
+        if moved:
+            self._changed()
+        return moved
+
+    def remove_item(self, package_id: str) -> bool:
+        removed = self._queue is not None and self._queue.remove(package_id)
+        if removed:
+            self._changed()
+        return removed
+
+    def set_direct_downloader(self, value: bool) -> None:
+        if self._queue is not None:
+            self._queue.set_direct_downloader(value)
 
     def _thaw(self) -> None:
         self._last_activity = self._clock()

@@ -52,7 +52,15 @@ def _run(app: WingetDeckApp, log: SessionLog, runner: Runner) -> int:
     return app.return_code or 0
 
 
+def _safe_output() -> None:
+    """A path with letters the console code page lacks must not turn an error message into a crash."""
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    _safe_output()
     args = _parse(argv)
     if args.version:
         print(f"WingetDeck {__version__}")

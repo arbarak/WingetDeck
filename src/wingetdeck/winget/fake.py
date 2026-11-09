@@ -18,6 +18,7 @@ from .backend import (
 )
 from .models import ChangeKind, Package, Progress, ScanResult, Stage
 from .proc import KillResult
+from .settings_file import DownloaderChange
 
 _KILLED = 1
 _DOWNLOAD_STEPS = 20
@@ -113,6 +114,13 @@ class FakeBackend:
 
     def refresh_capabilities(self) -> None:
         pass
+
+    def enable_direct_downloader(self, backups) -> DownloaderChange:
+        self.direct_downloader = True
+        return DownloaderChange(False, None, None)
+
+    def undo_direct_downloader(self, change: DownloaderChange) -> None:
+        self.direct_downloader = False
 
     def add_package(self, package: Package) -> None:
         self.packages.append(package)

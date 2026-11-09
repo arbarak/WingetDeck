@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from .models import Package, Progress, ScanResult, Stage
 from .proc import KillResult
+from .settings_file import DownloaderChange
 
 
 @dataclass(frozen=True)
@@ -107,3 +109,7 @@ class WingetBackend(Protocol):
     async def pin_remove(self, package_id: str) -> None: ...
 
     async def info_text(self) -> str: ...
+
+    def enable_direct_downloader(self, backups: Path) -> DownloaderChange: ...
+
+    def undo_direct_downloader(self, change: DownloaderChange) -> None: ...

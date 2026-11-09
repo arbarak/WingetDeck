@@ -478,3 +478,47 @@ async def test_emergency_stop_leaves_an_installer_alone(make):
 
 def test_emergency_stop_with_no_run_is_harmless(make):
     make(FakeBackend([])).runner.emergency_stop()
+
+
+async def test_view_carries_recent_output_and_a_running_total(make):
+    h = make(FakeBackend([], speed=200))
+    await h.runner.start([pkg("A")], options)
+    await h.runner.wait()
+    view = h.runner.view
+    assert view.output_total == len(view.output) and any("Successfully installed" in line for _, line in view.output)
+
+
+async def test_output_says_what_happened_to_each_package(make):
+    h = make(FakeBackend([], speed=200, script={"A": IN_USE}))
+    await h.runner.start([pkg("A")], options)
+    await h.runner.wait()
+    assert any("0x8A150101" in line for _, line in h.runner.view.output)
+
+
+async def test_move_and_remove_go_through_the_queue(make):
+    h = make(FakeBackend([], speed=5))
+    await h.runner.start([pkg("A"), pkg("B"), pkg("C")], options)
+    assert h.runner.move_item("C", -1)
+    assert [i.package.id for i in h.runner.view.items] == ["A", "C", "B"]
+    assert [i.id for i in h.store.load_queue().items] == ["A", "C", "B"], "saved"
+    assert h.runner.remove_item("B") and not h.runner.remove_item("A")
+    assert [i.id for i in h.store.load_queue().items] == ["A", "C"]
+    await h.runner.shutdown()
+
+
+async def test_summary_in_view_when_finished(make):
+    h = make(FakeBackend([], speed=200, script={"B": IN_USE}))
+    await h.runner.start([pkg("A"), pkg("B")], options)
+    await h.runner.wait()
+    assert (h.runner.view.summary.done, h.runner.view.summary.failed) == (1, 1)
+
+
+async def test_turning_on_direct_downloader_applies_from_the_next_package(make):
+    h = make(Recording([], speed=8, direct_downloader=False))
+    await h.runner.start([pkg("A"), pkg("B")], options)
+    await h.until_stage(Stage.DOWNLOADING)
+    h.runner.set_direct_downloader(True)
+    assert not h.runner.view.direct_downloader
+    h.runner.pause()
+    assert h.backend.actions == []
+    await h.runner.shutdown()
