@@ -7,7 +7,6 @@ import ctypes
 import os
 import stat
 import sys
-import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -27,11 +26,13 @@ def stamp() -> str:
 
 
 def _is_writable(folder: Path) -> bool:
-    # os.access is unreliable on Windows, so really try it.
+    # os.access is unreliable on Windows, so really try it. Not with tempfile: when access is denied
+    # but os.access says yes, tempfile retries about two billion times, which looks like a hang.
+    probe = folder / f".write-test-{os.getpid()}-{next(_counter)}"
     try:
         folder.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryFile(dir=folder):
-            pass
+        os.close(os.open(probe, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        probe.unlink()
     except OSError:
         return False
     return True

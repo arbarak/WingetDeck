@@ -47,3 +47,21 @@ def test_real_directory_link_is_detected(tmp_path):
     link = tmp_path / "link"
     subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)], check=True, capture_output=True)
     assert paths._is_redirected(link) and not paths._is_redirected(target)
+
+
+def test_a_folder_denied_by_permissions_is_refused_quickly(tmp_path):
+    """Windows calls this folder writable, and Python's tempfile then retries for ever. It must answer."""
+    import os
+    import subprocess
+    import sys
+
+    folder = tmp_path / "locked"
+    folder.mkdir()
+    user = os.environ["USERNAME"]
+    subprocess.run(["icacls", str(folder), "/deny", f"{user}:(OI)(CI)(WD,AD)"], check=True, capture_output=True)
+    code = "import sys, pathlib; from wingetdeck.paths import _is_writable; print(_is_writable(pathlib.Path(sys.argv[1])))"
+    try:
+        done = subprocess.run([sys.executable, "-c", code, str(folder)], capture_output=True, text=True, timeout=20)
+    finally:
+        subprocess.run(["icacls", str(folder), "/remove:d", user], check=True, capture_output=True)
+    assert done.stdout.strip() == "False"

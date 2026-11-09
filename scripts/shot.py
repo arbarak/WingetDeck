@@ -1,9 +1,13 @@
 """Save a picture of a screen of the demo app, for checking the look without a terminal.
 
 Usage: python scripts/shot.py OUTPUT.svg [WIDTH HEIGHT] [KEYS...]
+
+Set WINGETDECK_SHOT_REAL=1 to read this PC's real winget instead of the demo list. Keep the keys to
+looking around: this drives the real app.
 """
 
 import asyncio
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -14,6 +18,7 @@ from wingetdeck.core.store import Store
 from wingetdeck.paths import resolve_data_dir
 from wingetdeck.ui.app import WingetDeckApp
 from wingetdeck.winget.fake import FakeBackend, demo_packages
+from wingetdeck.winget.real import RealBackend
 
 
 async def main() -> None:
@@ -24,7 +29,8 @@ async def main() -> None:
         data = resolve_data_dir(Path(folder) / "a", Path(folder) / "b")
         log = SessionLog(data, False, {})
         store = Store(data, log)
-        backend = FakeBackend(demo_packages(), speed=4)
+        real = os.environ.get("WINGETDECK_SHOT_REAL") == "1"
+        backend = RealBackend(log) if real else FakeBackend(demo_packages(), speed=4)
         runner = Runner(backend, store, log, lambda view: None)
         app = WingetDeckApp(backend, store, log, runner)
         async with app.run_test(size=size) as pilot:

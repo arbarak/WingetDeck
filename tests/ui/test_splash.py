@@ -207,3 +207,20 @@ async def test_quitting_right_after_a_run_starts_does_not_crash(make_app):
         await pilot.pause(0.01)
         await app.action_quit()
     assert app._exception is None
+
+
+async def test_enter_works_while_the_source_list_is_still_loading(make_app):
+    import asyncio
+
+    class SlowSources(FakeBackend):
+        async def sources(self):
+            await asyncio.sleep(30)
+            return []
+
+    app = make_app(SlowSources(demo_packages(), speed=200))
+    async with app.run_test() as pilot:
+        await pilot.pause(0.2)
+        assert isinstance(app.screen, SplashScreen)
+        await pilot.press("enter")
+        await pilot.pause(0.2)
+        assert isinstance(app.screen, PackagesScreen) and app.screen.source is None

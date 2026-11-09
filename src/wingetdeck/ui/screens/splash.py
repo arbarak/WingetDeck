@@ -111,6 +111,7 @@ class SplashScreen(DeckScreen):
             app.show_no_winget(f"This PC has winget {caps.version}. WingetDeck needs {needed} or newer.")
             return
         self.query_one("#versions", Static).update(f"winget {caps.version}  ·  Windows {platform.version()}")
+        self.query_one("#start", Button).disabled = False  # All sources needs no list, which can be slow
         try:
             names = await app.backend.sources()
         except Exception as e:  # All sources still works without the list
@@ -122,7 +123,6 @@ class SplashScreen(DeckScreen):
         await listing.extend(ListItem(Static(source_label(n), markup=False)) for n in names)
         listing.index = 0
         listing.focus()
-        self.query_one("#start", Button).disabled = False
         app.offer_resume()
 
     def action_start(self) -> None:
