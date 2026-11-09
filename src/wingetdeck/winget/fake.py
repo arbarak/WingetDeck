@@ -35,8 +35,11 @@ class FakeHandle:
         self._running.set()
         self._killed = False
 
-    def freeze(self) -> None:
+    def freeze(self) -> bool:
+        if self._backend.refuse_freeze:
+            return False
         self._running.clear()
+        return True
 
     def thaw(self) -> None:
         self._running.set()
@@ -97,6 +100,7 @@ class FakeBackend:
         self.pin_ids: list[str] = []
         self.options_seen: dict[str, UpgradeOptions] = {}
         self.old_versions: dict[str, list[str]] = {}
+        self.refuse_freeze = False
 
     def capabilities(self) -> Capabilities:
         return Capabilities(

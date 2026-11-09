@@ -171,3 +171,56 @@ class ProgressParser:
             last_end = match.end()
         self._text = self._text[last_end:][-200:]
         return readings
+
+
+def parse_table_column(text: str, column: int) -> list[str]:
+    """One column of any winget table, read by position."""
+    lines = _visible_lines(text)
+    values: list[str] = []
+    for index, line in enumerate(lines):
+        if not _DASHES.match(line) or index == 0:
+            continue
+        starts = _column_starts(lines[index - 1])
+        for row in lines[index + 1:]:
+            if not row.strip() or _DASHES.match(row):
+                break
+            cells = _cut(row, starts)
+            if cells is None or column >= len(cells) or not cells[column]:
+                break
+            values.append(cells[column])
+        break
+    return values
+
+
+def parse_show(text: str):
+    """Details from `winget show`. Labels are English: other languages simply show nothing."""
+    from .backend import PackageDetails
+
+    lines = _visible_lines(text)
+    publisher = homepage = None
+    notes: list[str] = []
+    in_notes = False
+    for line in lines:
+        if in_notes:
+            if line.startswith((" ", "\t")):
+                notes.append(line.strip())
+                continue
+            in_notes = False
+        if line.startswith("Publisher:"):
+            publisher = line.split(":", 1)[1].strip() or None
+        elif line.startswith("Homepage:"):
+            homepage = line.split(":", 1)[1].strip() or None
+        elif line.startswith("Release Notes:"):
+            first = line.split(":", 1)[1].strip()
+            if first:
+                notes.append(first)
+            in_notes = True
+    return PackageDetails(publisher, homepage, "\n".join(notes) or None)
+
+
+def parse_versions(text: str) -> list[str]:
+    lines = _visible_lines(text)
+    for index, line in enumerate(lines):
+        if _DASHES.match(line):
+            return [ln.strip() for ln in lines[index + 1:] if ln.strip()]
+    return []
