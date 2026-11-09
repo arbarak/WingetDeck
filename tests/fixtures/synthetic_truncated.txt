@@ -1,0 +1,3 @@
+Name                       Id                  Version Available Source
+-----------------------------------------------------------------------
+Some Very Long Applicatio… Some.Very.Long.Appl… 1.0     1.1       winget

@@ -1,0 +1,9 @@
+Name Id      Version Available Source
+-------------------------------------
+Git  Git.Git 2.50.0  2.51.1    winget
+1 upgrades available.
+
+The following packages have an upgrade available, but require explicit targeting for upgrade:
+Name    Id        Version Available Source
+------------------------------------------
+Discord Discord.D 1.0.0   1.1.0     winget

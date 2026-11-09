@@ -1,0 +1,4 @@
+Nom      ID          Version Disponible Source
+----------------------------------------------
+Réseau é Reseau.App  1.0     1.1        winget
+1 mises à niveau disponibles.

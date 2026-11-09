@@ -1,0 +1,4 @@
+Name Id      Version Verfügbar Quelle
+-------------------------------------
+Git  Git.Git 2.50.0  2.51.1    winget
+1 Aktualisierungen verfügbar.

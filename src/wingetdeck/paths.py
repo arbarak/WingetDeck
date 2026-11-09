@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import itertools
+import ctypes
 import os
+import stat
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -12,6 +14,8 @@ from pathlib import Path
 
 PORTABLE_FOLDER = "WingetDeck-data"
 PROFILE_FOLDER = "WingetDeck"
+
+_SUBFOLDERS = ("logs", "state", "snapshots")
 
 _counter = itertools.count()
 
@@ -56,9 +60,29 @@ class DataDir:
         return self._sub("snapshots")
 
 
-def resolve_data_dir(exe_dir: Path, local_appdata: Path) -> DataDir:
+def _is_redirected(path: Path) -> bool:
+    """True for a junction or symbolic link, which could point the app's files somewhere else."""
+    try:
+        attributes = os.lstat(path).st_file_attributes
+    except OSError:
+        return False
+    return bool(attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+
+
+def resolve_data_dir(exe_dir: Path, local_appdata: Path, elevated: bool = False) -> DataDir:
+    """Use the folder beside the exe, unless that is unsafe or impossible.
+
+    An elevated run never trusts it: another user could have written settings or a queue there
+    that would then drive installers as administrator. Links are refused for the same reason.
+    """
     portable_root = exe_dir / PORTABLE_FOLDER
-    if _is_writable(exe_dir) and _is_writable(portable_root):
+    if (
+        not elevated
+        and not any(_is_redirected(p) for p in (exe_dir, portable_root))
+        and not any(_is_redirected(portable_root / n) for n in _SUBFOLDERS)
+        and _is_writable(exe_dir)
+        and _is_writable(portable_root)
+    ):
         return DataDir(portable_root, portable=True)
     return DataDir(local_appdata / PROFILE_FOLDER, portable=False)
 
@@ -70,4 +94,11 @@ def app_data_dir() -> DataDir:
     else:
         exe_dir = Path(__file__).resolve().parents[2]
     local = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
-    return resolve_data_dir(exe_dir, local)
+    return resolve_data_dir(exe_dir, local, elevated=is_elevated())
+
+
+def is_elevated() -> bool:
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except (AttributeError, OSError):
+        return False

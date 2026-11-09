@@ -1,0 +1,5 @@
+Name                        Id                    Version Available Source
+--------------------------------------------------------------------------
+Windows Subsystem for Linux Microsoft.WSL         2.7.3.0 2.7.14    winget
+wkhtmltox 0.12.6-1          wkhtmltopdf.wkhtmltox Unknown 0.12.6-1  winget
+2 upgrades available.

@@ -1,0 +1,5 @@
+Name                        Id            Version Available Source
+------------------------------------------------------------------
+Windows Subsystem for Linux Microsoft.WSL 2.7.3.0 2.7.14    winget
+1 upgrades available.
+1 package(s) have version numbers that cannot be determined. Use --include-unknown to see all results.
