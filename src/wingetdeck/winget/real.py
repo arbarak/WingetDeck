@@ -22,7 +22,7 @@ from .backend import (
     UpgradeOptions,
 )
 from .capabilities import detect_capabilities
-from .codes import explain
+from .codes import Outcome, explain
 from .models import Package, ScanResult
 from .parse import parse_show, parse_table_column, parse_upgrade_table, parse_versions
 from .proc import KillResult, freeze_tree, kill_tree, thaw_tree, tree_names
@@ -169,7 +169,9 @@ class RealHandle:
         if code is None:
             code = _KILLED_EXIT
         info = explain(code)
-        self._log.info("winget finished", package=self._package_id, code=info.hex_code, meaning=info.message)
+        worked = info.outcome in (Outcome.SUCCESS, Outcome.SUCCESS_RESTART, Outcome.SKIPPED)
+        report = self._log.info if worked else self._log.warn
+        report("winget finished", package=self._package_id, code=info.hex_code, meaning=info.message)
         self._transcript.close()
         self._emit([FinishedEvent(code)])
         self._emit([None])
@@ -183,6 +185,14 @@ class RealHandle:
             if event is None:
                 return
             yield event
+
+    def installer_running(self) -> bool:
+        """Anything under winget but its console. When the list cannot be read, the careful answer is yes."""
+        try:
+            return any(n.lower() not in _CONSOLE_HOSTS for n in tree_names(self.pid))
+        except OSError as e:
+            self._log.warn("Could not list winget's processes", package=self._package_id, error=repr(e))
+            return True
 
     def freeze(self) -> bool:
         """Refused when an installer is running under winget: installers are never frozen."""
@@ -255,7 +265,9 @@ class RealBackend:
             raise WingetError("winget is not available on this PC")
         if "--disable-interactivity" in self.capabilities().flags:
             full.append("--disable-interactivity")
-        if self.accept_source_agreements and "--accept-source-agreements" in self.capabilities().flags:
+        # `source list` and `source update` reject this flag as invalid arguments
+        accepted = self.accept_source_agreements and args[0] != "source"
+        if accepted and "--accept-source-agreements" in self.capabilities().flags:
             full.append("--accept-source-agreements")
         self._log.info("winget query", command=" ".join(full))
         try:

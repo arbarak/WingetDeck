@@ -371,8 +371,9 @@ class ProgressScreen(DeckScreen):
             runner.stop_after()
             self.say("Stopping after this package.") if choice == STOP_AFTER else None
         elif choice == STOP_NOW:
-            runner.stop_now()
-            if not runner.view.direct_downloader:
+            if runner.stop_now() is None:
+                self.say("Not stopped: an installer has started, and ending one midway can break the app.")
+            elif not runner.view.direct_downloader:
                 self.say("Stopped. Windows' download service may still finish the download in the background.")
         elif choice == FORCE_STOP:
             self.app.push_screen(

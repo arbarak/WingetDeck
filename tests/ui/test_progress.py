@@ -65,6 +65,9 @@ class Scripted(FakeBackend):
         backend.started.append(package.id)
 
         class Handle:
+            def installer_running(self):
+                return False
+
             pid = 0
 
             def freeze(self):

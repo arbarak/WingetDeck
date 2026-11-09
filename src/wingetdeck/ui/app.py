@@ -26,6 +26,7 @@ from .responsive import MEDIUM, WIDE, taskbar_code, title_text
 from .screens.dialogs import ConfirmDialog
 from .screens.history import HistoryScreen
 from .screens.logs import LogsScreen
+from ..winget.repair import WingetRepair
 from .screens.no_winget import NoWingetScreen
 from .screens.packages import PackagesScreen, run_is_active
 from .screens.progress import ProgressScreen
@@ -85,6 +86,7 @@ class WingetDeckApp(App):
         ascii_mode: bool = False,
         symbols: Callable[[str], str] | None = None,
         tidy_console: Callable[[], None] | None = None,
+        repair: WingetRepair | None = None,
     ) -> None:
         self.backend = backend
         self.store = store
@@ -93,6 +95,8 @@ class WingetDeckApp(App):
         self.ascii_mode = ascii_mode
         self.symbols = to_ascii if ascii_mode else symbols
         self.tidy_console = tidy_console
+        self.repair = repair or WingetRepair()
+        self._run_starting = False
         self._run_listeners: list[Callable[[RunView], None]] = []
         self._resume_offered = False
         self._last_title = ""
@@ -184,15 +188,22 @@ class WingetDeckApp(App):
         self.push_screen(PackagesScreen(source))
 
     def start_upgrade(self, packages: list[Package]) -> None:
+        if self._run_starting:
+            self.log_file.info("Upgrade pressed again while starting, ignored")
+            return
         self.log_file.info("Upgrade requested", packages=[p.id for p in packages])
-        settings = self.store.load_settings()
-        if settings.asked_agreements:
+
+        def begin() -> None:
+            self._run_starting = True
             self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+
+        if self.store.load_settings().asked_agreements:
+            begin()
             return
 
         def answered(consent: bool | None) -> None:
             if consent is not None:
-                self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+                begin()
 
         self.ask_agreements(answered)
 
@@ -220,14 +231,17 @@ class WingetDeckApp(App):
         return replace(chosen, accept_agreements=settings.consented_agreements)
 
     async def _begin_run(self, packages: list[Package], starter=None) -> None:
-        if not await self._safety_steps():
-            return
         try:
-            await self.runner.start(packages, self.options_for, starter)
-        except RuntimeError as e:
-            self.log_file.warn("Run not started", error=str(e))
-            self.notify(str(e), severity="warning")
-            return
+            if not await self._safety_steps():
+                return
+            try:
+                await self.runner.start(packages, self.options_for, starter)
+            except RuntimeError as e:
+                self.log_file.warn("Run not started", error=str(e))
+                self.notify(str(e), severity="warning")
+                return
+        finally:
+            self._run_starting = False
         screen = self.progress_screen()
         if screen.is_mounted:
             screen.new_run()
@@ -235,6 +249,7 @@ class WingetDeckApp(App):
 
     async def _safety_steps(self) -> bool:
         """False means the user chose not to go on."""
+        self.notify("Saving the list of installed apps before starting…", timeout=4)
         try:
             path = await take_snapshot(self.backend, self.log_file.data_dir)
             self.log_file.info("Snapshot saved", path=str(path))
@@ -308,8 +323,8 @@ class WingetDeckApp(App):
         if failed:
             self.start_upgrade(failed)
 
-    def show_no_winget(self, reason: str | None = None) -> None:
-        self.switch_screen(NoWingetScreen(reason))
+    def show_no_winget(self, reason: str | None = None, too_old: bool = False) -> None:
+        self.switch_screen(NoWingetScreen(reason, too_old))
 
     def check_winget_again(self) -> None:
         self.backend.refresh_capabilities()

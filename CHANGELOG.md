@@ -3,6 +3,40 @@
 Found a problem that is not listed here?
 [Report it](https://github.com/arbarak/WingetDeck/issues/new/choose) and it can be fixed in the next release.
 
+## 1.0.2, 9 November 2026
+
+### Added
+
+- **Get winget**, for PCs where winget is missing, too old or not set up. It asks before each step:
+  - It tries to activate a winget that is already on the PC, with nothing downloaded.
+  - Otherwise it finds the newest stable winget made for this Windows build and processor, then offers to download and
+    install it from Microsoft's official releases, showing the version and size first.
+  - It installs nothing unless the checksum, Microsoft's signature and the package name all check out.
+- **Microsoft Store** on the same screen opens App Installer's page.
+- If App Installer is there but its `winget` command is off, the app says where to turn it on.
+
+### Changed
+
+- The app now has network code, used only by Get winget and only when you ask. It talks to GitHub alone.
+- The app now understands winget in all 11 languages it ships, not only English: its stages and the details page.
+
+### Fixed
+
+Found by real upgrades on a second PC, with Windows 10 in French:
+
+- **After accepting the agreements, Refresh sources always failed** with "Invalid command line arguments", so the list
+  could be out of date. The next start would also have said the sources could not be listed. Both are fixed.
+- **On Windows in another language, the app could not tell downloading from installing.** Stop offered Force stop and said
+  an installer was running, even during a download, and Stop now and the mid-download Pause were never offered.
+- Pressing Upgrade did nothing visible while the list of installed apps was saved, which took 9 seconds there, so it was
+  easy to press again and save a second list. The app now says what it is doing, and ignores the second press.
+
+Also fixed:
+
+- Stop now checks that no installer is running before it ends anything, rather than relying on winget's words alone.
+- Closing the app in the moment it was starting up could end in an error.
+- Logs now mark a failed package as a warning, say when a Pause takes effect, and record the app closing.
+
 ## 1.0.1, 9 November 2026
 
 These problems were found by running 1.0.0 on a second PC, with Windows 10. Double-clicking the exe there opens the

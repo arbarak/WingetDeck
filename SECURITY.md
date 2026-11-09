@@ -17,10 +17,15 @@ Only the latest release gets fixes.
 - Secrets or personal details left in a diagnostic report.
 - Changes to winget's settings beyond the one opt-in key, `network.downloader`.
 - A process left frozen, or an unrelated process stopped.
+- Any way to make Get winget install something that did not come from Microsoft.
 
 ## What the app does
 
-- It has no network code of its own. All downloads are done by winget.
+- Winget downloads every upgrade. The app's own network code runs only when you press Get winget and agree, and it goes
+  only to GitHub over HTTPS, refusing a redirect anywhere else.
+- Get winget installs nothing unless the files match GitHub's checksums, each has a valid Microsoft signature, and the
+  package is App Installer. Windows checks the signature again when it installs. PowerShell is started by its full path,
+  and file names reach it through variables, so they cannot become code.
 - It sends no data anywhere. Logs stay in its data folder until you share them.
 - When running as administrator, it ignores the folder beside the exe and uses your profile folder.
 - It finds winget on the PATH or in Windows' own folder for it, and never runs a `winget.exe` from the current folder.

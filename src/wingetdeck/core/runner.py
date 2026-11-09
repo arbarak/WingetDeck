@@ -300,6 +300,8 @@ class Runner:
         q.on_finished(code)
         if q.state is RunState.FINISHED:
             self._finished_at = self._clock()
+        elif q.state is RunState.PAUSED:
+            self._log.info("Paused before the next package")
         if start_error and item.state is ItemState.FAILED:
             item.message = start_error
         self._progress = None
@@ -359,7 +361,8 @@ class Runner:
                 self._samples.clear()
             else:
                 self._queue.freeze_refused()
-        self._log.info("Pause pressed", state=self._queue.state.value)
+        now = self._queue.state is RunState.PAUSED
+        self._log.info("Pause pressed", state=self._queue.state.value, applies="now" if now else "after this package")
         self._changed()
 
     def resume(self) -> None:
@@ -422,6 +425,12 @@ class Runner:
         if self._queue is None:
             return None
         self._log.info("Stop now pressed")
+        if self._queue.active is not None and self._handle is not None and self._handle.installer_running():
+            # Stop now is only for a download. The stage came from reading winget's words, so check what is really running.
+            self._log.warn("Stop now refused, an installer is running", package=self._queue.active.package.id)
+            self._queue.on_stage(Stage.INSTALLING)
+            self._changed()
+            return None
         return self._kill(self._queue.stop_now())
 
     def force_stop(self) -> KillResult | None:

@@ -199,10 +199,18 @@ Button:disabled {
 }
 
 #help {
-    width: auto;
+    width: 100%;
     max-width: 90;
     height: auto;
     margin-bottom: 1;
+}
+
+#repair-note {
+    width: 100%;
+    max-width: 90;
+    height: auto;
+    margin-bottom: 1;
+    color: $warning;
 }
 
 #no-winget-buttons {

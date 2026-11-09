@@ -36,6 +36,9 @@ class FakeHandle:
         self._running.set()
         self._killed = False
 
+    def installer_running(self) -> bool:
+        return self._backend.installer_started
+
     def freeze(self) -> bool:
         if self._backend.refuse_freeze:
             return False
@@ -97,6 +100,8 @@ class FakeBackend:
         self.live_progress = live_progress
         self.scan_error = scan_error
         self.source_updates = 0
+        self.installer_started = False
+        self.export_seconds = 0.0
         self.calls: list[str] = []
         self.pin_ids: list[str] = []
         self.options_seen: dict[str, UpgradeOptions] = {}
@@ -169,6 +174,7 @@ class FakeBackend:
 
     async def export_snapshot(self, path) -> None:
         self.calls.append("export_snapshot")
+        await asyncio.sleep(self.export_seconds)
         Path(path).write_text('{"demo": true}', encoding="utf-8")
 
     async def pins(self) -> list[str]:

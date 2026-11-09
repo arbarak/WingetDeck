@@ -39,7 +39,7 @@ The owner asked for, in their words:
 - Linux or macOS (winget is Windows only).
 - Other package managers such as Chocolatey or Scoop.
 - A native non-terminal window. A terminal app is the look the owner approved.
-- Telemetry or any network call of its own. The app only talks to winget.
+- Telemetry. The only network call of its own is Get winget (added in 1.0.2), which runs when the user asks and goes only to Microsoft's GitHub releases.
 
 ## 4. Anti-goals: a failure even if everything else works
 

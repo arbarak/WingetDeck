@@ -69,7 +69,7 @@ These all come from demo mode, so the packages, versions and speeds are pretend.
 ## Run it
 
 Copy `WingetDeck-x64.exe` anywhere and double-click it. You need Windows 10 version 1809 or newer, and winget 1.4 or
-newer. If winget is missing or too old, the app says how to get it.
+newer. If winget is missing or too old, the app can sort that out for you: see [No winget?](#no-winget)
 
 ```
 WingetDeck-x64.exe            the real thing
@@ -86,6 +86,28 @@ percent or speed, only an animation and the elapsed time. There is no ARM64 exe 
 **The SmartScreen warning:** the exe is not signed, so Windows may say it is from an unknown publisher. Choose
 **More info**, then **Run anyway**, if you trust where the file came from. Each release lists SHA-256 checksums, and
 [SECURITY.md](SECURITY.md) shows how to check them.
+
+## No winget?
+
+From version 1.0.2, if winget cannot be used, the app shows a help screen with a **Get winget** button. It asks before each
+step, and does nothing until you press it.
+
+| What is wrong | What happens |
+|---|---|
+| Winget is on the PC but not set up for your account | It asks, then has Windows activate it. Nothing is downloaded |
+| Winget is missing, or too old | It finds the newest stable version made for your Windows build and processor, tells you the version and size, and asks before downloading and installing it |
+| App Installer is there, but its `winget` command is switched off | It tells you where to turn it on in Windows Settings |
+| No version fits, no internet, or Windows refuses | It says so, and **Microsoft Store** opens App Installer's page as the other way to get it |
+| Your Windows is older than 1809 | Winget cannot run there, and the app says so |
+
+The download comes only from [Microsoft's releases on GitHub](https://github.com/microsoft/winget-cli/releases). Nothing is
+installed unless it matches GitHub's checksum and carries a valid Microsoft signature, and the package really is App
+Installer. It installs for your Windows account, with no admin rights, and the downloaded files are then removed.
+
+**A Windows licence is not part of this.** The app does not check whether Windows is activated. "Activate" here only means
+setting winget up for your account.
+
+**If winget's agreements were never accepted,** the app asks about those when it first looks for upgrades.
 
 ## Using it
 
@@ -125,7 +147,8 @@ Settings, the saved queue, snapshots and logs go in `WingetDeck-data` beside the
 to, or the app is running as administrator, they go in `%LOCALAPPDATA%\WingetDeck` instead, and the start screen shows
 which is in use. `--demo` keeps its data in a separate `demo` subfolder. Nothing is ever deleted automatically.
 
-The app has no network code of its own: all downloads are winget's, and it sends no data anywhere.
+Every upgrade is downloaded by winget. The app's own network code is used only by **Get winget**, and only when you ask.
+It talks to GitHub alone. The app sends no data about you or your PC anywhere.
 
 ## When something goes wrong
 
@@ -137,7 +160,8 @@ full output. If the app itself crashes, it restores the terminal and shows the p
 ## Found a bug?
 
 Please [report it](https://github.com/arbarak/WingetDeck/issues/new/choose). The form asks for what happened and your
-Windows version, and a screenshot helps a lot. A diagnostic report helps too, but issues are public, so read it first.
+Windows version, and a screenshot helps a lot. A diagnostic report helps too, but issues are public and logs can show your
+Windows user name and installed apps, so read it first.
 Security problems are different: please report those privately, as [SECURITY.md](SECURITY.md) explains.
 
 ### Problems already found and fixed
@@ -148,6 +172,15 @@ Version 1.0.1 fixes what a first run on a second PC, with Windows 10, turned up:
 - A stray blinking cursor, and scrollbars left at the edges of the window.
 - Long package IDs cut off, and a wide empty gap after the package name.
 - The last footer key cut off at the standard window size, and uneven checkboxes in Settings.
+- **Security:** a `winget.exe` in the folder the app was started from would be run instead of the real one. Please update
+  from 1.0.0.
+- Check again could not see a winget installed after the app started.
+
+Version 1.0.2 fixes what real upgrades on that PC turned up, with Windows in French:
+
+- After accepting the agreements, Refresh sources always failed with "Invalid command line arguments".
+- On Windows in another language, the app could not tell downloading from installing, so Stop offered the wrong choices.
+- Pressing Upgrade showed nothing while the app saved its list of installed apps, so it was easy to press twice.
 
 [CHANGELOG.md](CHANGELOG.md) has the details for each release.
 
@@ -176,6 +209,7 @@ Checks for a built exe, none of which open a window or upgrade anything:
 .venv\Scripts\python scripts\pty_check.py --exe path\to.exe           # resizing, with the real terminal driver
 .venv\Scripts\python scripts\portable_check.py path\to.exe WORK_DIR   # odd paths, no Python, read-only folder
 .venv\Scripts\python scripts\real_scan_check.py path\to.exe           # reads real winget; never presses Upgrade
+.venv\Scripts\python scripts\repair_check.py --download               # real search, download and checks; never installs
 ```
 
 The design is written up in [docs/design.md](docs/design.md).

@@ -193,8 +193,18 @@ def parse_table_column(text: str, column: int) -> list[str]:
 
 
 def parse_show(text: str):
-    """Details from `winget show`. Labels are English: other languages simply show nothing."""
+    """Details from `winget show`, whichever language winget speaks."""
     from .backend import PackageDetails
+    from .message_table import HOMEPAGE, PUBLISHER, RELEASE_NOTES
+    from .stages import plain
+
+    def after(line: str, labels: tuple[str, ...]) -> str | None:
+        """What follows the label on this line, or None when it is a different line."""
+        text = plain(line)
+        for label in labels:
+            if text.startswith(plain(label)):
+                return text[len(plain(label)):].strip()
+        return None
 
     lines = _visible_lines(text)
     publisher = homepage = None
@@ -206,14 +216,13 @@ def parse_show(text: str):
                 notes.append(line.strip())
                 continue
             in_notes = False
-        if line.startswith("Publisher:"):
-            publisher = line.split(":", 1)[1].strip() or None
-        elif line.startswith("Homepage:"):
-            homepage = line.split(":", 1)[1].strip() or None
-        elif line.startswith("Release Notes:"):
-            first = line.split(":", 1)[1].strip()
-            if first:
-                notes.append(first)
+        if (value := after(line, PUBLISHER)) is not None:
+            publisher = value or None
+        elif (value := after(line, HOMEPAGE)) is not None:
+            homepage = value or None
+        elif (value := after(line, RELEASE_NOTES)) is not None:
+            if value:
+                notes.append(value)
             in_notes = True
     return PackageDetails(publisher, homepage, "\n".join(notes) or None)
 

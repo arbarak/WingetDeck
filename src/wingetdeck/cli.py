@@ -72,6 +72,7 @@ def _run(app: WingetDeckApp, log: SessionLog, runner: Runner) -> int:
         runner.emergency_stop()
     if app._exception is not None:  # Textual has already restored the terminal
         return _crash(log, app._exception)
+    log.info("Session closed")  # without this line, a log cannot tell a closed window from a killed one
     return app.return_code or 0
 
 

@@ -97,6 +97,8 @@ class SplashScreen(DeckScreen):
             app.log_file.error("Could not read winget capabilities", error=repr(e))
             app.show_no_winget(str(e))
             return
+        if not self.query("#versions"):  # the app was closed while winget was answering
+            return
         if caps is None:
             app.log_file.warn("winget not found")
             app.show_no_winget()
@@ -110,7 +112,7 @@ class SplashScreen(DeckScreen):
         )
         if winget_too_old(caps.version):
             needed = ".".join(str(part) for part in MIN_WINGET)
-            app.show_no_winget(f"This PC has winget {caps.version}. WingetDeck needs {needed} or newer.")
+            app.show_no_winget(f"This PC has winget {caps.version}. WingetDeck needs {needed} or newer.", too_old=True)
             return
         self.query_one("#versions", Static).update(f"winget {caps.version}  ·  Windows {platform.version()}")
         self.query_one("#start", Button).disabled = False  # All sources needs no list, which can be slow
@@ -121,6 +123,8 @@ class SplashScreen(DeckScreen):
             app.log_file.error("Could not list sources", error=repr(e))
             self._note(f"Could not list winget sources: {e}")
             names = []
+        if not self.query("#sources"):
+            return
         self._choices = [None, *names]
         listing = self.query_one("#sources", SourceList)
         await listing.extend(ListItem(Static(source_label(n), markup=False)) for n in names)

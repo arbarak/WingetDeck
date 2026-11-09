@@ -72,7 +72,7 @@
         <li>It upgrades only what you tick.</li>
         <li>It keeps its data in a <code>WingetDeck-data</code> folder beside the exe. If that folder cannot be written to, or you run it as administrator, it uses <code>%LOCALAPPDATA%\WingetDeck</code> and tells you so.</li>
         <li>It saves a list of your installed versions before each run, so there is a record of how things were.</li>
-        <li>It has no network code of its own. All downloads are winget's.</li>
+        <li>Winget downloads every upgrade. The app's own network code is used only if you ask it to get winget for you, and then only to reach GitHub.</li>
         <li>Its logs stay on your PC. A diagnostic report removes your user name and the secrets it recognises, and shows what it includes before saving. Read it before you share it.</li>
       </ul>
     </section>
@@ -90,18 +90,22 @@
             <li>Seven window sizes, using the real terminal driver</li>
             <li>Every screen in the classic Windows console, by eye, on Windows 11 with several console fonts</li>
             <li>Winget's own download pausing and stopping, in Windows Sandbox, before the app was finished</li>
-            <li>541 automated tests</li>
+            <li>Real upgrades of 4 apps on Windows 10 in French, in the classic console, with a real Pause and Stop between packages</li>
+            <li>A simulated PC with no winget, finding a compatible version on the real GitHub</li>
+            <li>Downloading the real winget and checking its checksum and Microsoft's signature, stopping before installing it</li>
+            <li>653 automated tests</li>
           </ul>
         </div>
         <div>
           <h3>Not checked yet</h3>
           <ul class="plain">
-            <li>Pause, Resume and Stop during a real upgrade with this app</li>
+            <li>Resume, Stop now and a Pause in the middle of a download, during a real upgrade</li>
+            <li>Get winget actually installing or activating winget on a PC that needs it</li>
             <li>A real upgrade with the 32-bit exe</li>
             <li>A download frozen for many minutes</li>
-            <li>Version 1.0.1 on Windows 10. Version 1.0.0 was tried there, which is how its display problems were found</li>
+            <li>Version 1.0.2's fixes on the Windows 10 PC. They were found by running 1.0.1 there</li>
             <li>Windows Server and ARM64</li>
-            <li>Windows in other languages</li>
+            <li>Windows in languages other than English and French</li>
           </ul>
         </div>
       </div>
@@ -111,7 +115,7 @@
     <section class="start" aria-labelledby="start-title">
       <h2 id="start-title">Get started</h2>
       <ol>
-        <li>Download <code>WingetDeck-x64.exe</code> and put it in any folder. You need Windows 10 version 1809 or newer, and winget 1.4 or newer.</li>
+        <li>Download <code>WingetDeck-x64.exe</code> and put it in any folder. You need Windows 10 version 1809 or newer. If winget is missing or too old, the app can get it for you, and asks first.</li>
         <li>Open it. The exe is not signed, so Windows may warn that the publisher is unknown. If you trust this page, choose More info, then Run anyway. You can compare the file with the checksums on the release page first.</li>
         <li>Choose a source, press START, tick your apps, and press UPGRADE.</li>
       </ol>
