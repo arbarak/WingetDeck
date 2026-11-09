@@ -32,8 +32,8 @@ _CHIPS = {
     Stage.INSTALLING: N_("INSTALLING"),
     Stage.WORKING: N_("WORKING"),
 }
-_ICON_PALETTE = {"#": "#00c8e8", "+": "#0a6fdc"}
-_ICON_DONE = {"#": "#66dd00", "+": "#3c8a00"}
+_ICON_PALETTE = {"#": "$wd-cyan", "+": "$wd-blue"}
+_ICON_DONE = {"#": "$wd-lime", "+": "#3c8a00"}
 
 _OFFER = N_(
     "This download cannot be held right now. Windows' download service carries it on even if winget "

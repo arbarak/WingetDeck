@@ -21,7 +21,7 @@
 
 > [!WARNING]
 > **This is an early release.** It has done real upgrades on two PCs, with Pause and Stop between packages, but Stop
-> now, Resume and a Pause in the middle of a download have not been used in a real upgrade yet. Try `WingetDeck-1.0.4-x64.exe --demo` first, which installs nothing.
+> now, Resume and a Pause in the middle of a download have not been used in a real upgrade yet. Try `WingetDeck-1.0.5-x64.exe --demo` first, which installs nothing.
 > [docs/TESTED.md](docs/TESTED.md) lists exactly what was and was not checked.
 
 ## What it does
@@ -69,24 +69,24 @@ These all come from demo mode, so the packages, versions and speeds are pretend.
 
 ## Run it
 
-Copy `WingetDeck-1.0.4-x64.exe` anywhere and double-click it. You need Windows 10 version 1809 or newer, and winget 1.4 or
+Copy `WingetDeck-1.0.5-x64.exe` anywhere and double-click it. You need Windows 10 version 1809 or newer, and winget 1.4 or
 newer. If winget is missing or too old, the app can sort that out for you: see [No winget?](#no-winget)
 
 ```
-WingetDeck-1.0.4-x64.exe            the real thing
-WingetDeck-1.0.4-x64.exe --demo     try everything with a pretend winget; nothing is installed
-WingetDeck-1.0.4-x64.exe --basic    reduced symbols, if your console shows empty boxes
-WingetDeck-1.0.4-x64.exe --ascii    plain characters only, the last resort for an old console
-WingetDeck-1.0.4-x64.exe --debug    also log every line winget prints
-WingetDeck-1.0.4-x64.exe --version  print the version
+WingetDeck-1.0.5-x64.exe            the real thing
+WingetDeck-1.0.5-x64.exe --demo     try everything with a pretend winget; nothing is installed
+WingetDeck-1.0.5-x64.exe --basic    reduced symbols, if your console shows empty boxes
+WingetDeck-1.0.5-x64.exe --ascii    plain characters only, the last resort for an old console
+WingetDeck-1.0.5-x64.exe --debug    also log every line winget prints
+WingetDeck-1.0.5-x64.exe --version  print the version
 ```
 
 **Language:** press `t` for Settings. Language is the first line: choose English, Français or Automatic, and the
 screen changes straight away. Automatic follows the language Windows shows. In French the label reads
 `Langue (Language)`, so it can always be found.
 
-**Which exe:** each name says the version and the processor type. `WingetDeck-1.0.4-x64.exe` is for nearly every PC.
-`WingetDeck-1.0.4-x86.exe` is for 32-bit Windows and has no live
+**Which exe:** each name says the version and the processor type. `WingetDeck-1.0.5-x64.exe` is for nearly every PC.
+`WingetDeck-1.0.5-x86.exe` is for 32-bit Windows and has no live
 percent or speed, only an animation and the elapsed time. There is no ARM64 exe in this release.
 
 **The SmartScreen warning:** the exe is not signed, so Windows may say it is from an unknown publisher. Choose
@@ -192,6 +192,8 @@ Version 1.0.3 fixes a strip down the right edge of the classic console that kept
 running 1.0.2 on the same PC.
 
 Version 1.0.4 adds French, and the UPGRADE button now shows how many packages are ticked.
+
+Version 1.0.5 makes the logo readable on the Light theme.
 
 [CHANGELOG.md](CHANGELOG.md) has the details for each release.
 

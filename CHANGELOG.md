@@ -3,6 +3,14 @@
 Found a problem that is not listed here?
 [Report it](https://github.com/arbarak/WingetDeck/issues/new/choose) and it can be fixed in the next release.
 
+## 1.0.5, 9 November 2026
+
+### Fixed
+
+- **The logo can be read on the Light theme.** The word Winget was always white, so on a light background it all but
+  vanished. The logo now takes its colours from the theme: dark letters on Light, unchanged on Green.
+- The package icon on the upgrade screen was faint on the Light theme too, and now follows the theme the same way.
+
 ## 1.0.4, 9 November 2026
 
 ### Added

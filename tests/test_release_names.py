@@ -1,4 +1,4 @@
-"""Downloads are named with the version and the processor type, such as WingetDeck-1.0.4-x64.exe.
+"""Downloads are named with the version and the processor type, such as WingetDeck-1.0.5-x64.exe.
 
 A name that changes with each version cannot be reached through GitHub's "latest" link, so the page and the README
 point at this version's files, and these tests fail if they fall behind the version number.

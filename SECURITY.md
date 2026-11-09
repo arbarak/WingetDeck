@@ -37,5 +37,5 @@ The exes are not code-signed yet, so Windows SmartScreen may warn about them. Ea
 `SHA256SUMS.txt`. To check a file:
 
 ```powershell
-Get-FileHash .\WingetDeck-1.0.4-x64.exe -Algorithm SHA256
+Get-FileHash .\WingetDeck-1.0.5-x64.exe -Algorithm SHA256
 ```

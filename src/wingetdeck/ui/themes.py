@@ -30,6 +30,9 @@ DEFAULT_VARIABLES = {
     "wd-off": "#262626",
     "wd-off-text": "#777777",
     "wd-list": "#111111",
+    "wd-logo-box": "#00ff22",
+    "wd-logo-fill": "#008f22",
+    "wd-logo-text": "#ffffff",
 }
 
 THEMES = [
@@ -88,6 +91,9 @@ THEMES = [
             "wd-gray-low": "#aaaaaa",
             "wd-off": "#e0e0e0",
             "wd-off-text": "#8a8a8a",
+            "wd-logo-box": "#1a7f37",
+            "wd-logo-fill": "#0b5d22",
+            "wd-logo-text": "#1b1b1b",
         },
     ),
 ]

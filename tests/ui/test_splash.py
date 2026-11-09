@@ -1,3 +1,4 @@
+import pytest
 from textual.widgets import Button, ListItem, Static
 
 from wingetdeck.paths import DataDir
@@ -173,6 +174,20 @@ def test_logo_is_original_box_and_arrow_in_half_blocks():
 def test_pixel_art_ascii_mode_has_only_ascii():
     lines = PixelArt(LOGO, PALETTE, ascii_mode=True).to_plain()
     assert all(line.isascii() for line in lines) and any("#" in line for line in lines)
+
+
+@pytest.mark.parametrize("theme", [t.name for t in THEMES])
+async def test_logo_stands_out_in_every_theme(make_app, faint_pixels, theme):
+    """The word Winget was always white: on the Light theme it all but vanished."""
+    app = make_app()
+    async with app.run_test(size=(100, 34)) as pilot:
+        await pilot.pause()
+        app.theme = theme  # changed while the logo is on screen, like from Settings
+        await pilot.pause()
+        await pilot.pause()
+        logo = app.screen.query_one("#logo", PixelArt)
+        assert not faint_pixels(app, logo, 4.5, slice(-4, None)), f"letters hard to read on {theme}"
+        assert not faint_pixels(app, logo, 3, slice(None, -4)), f"box hard to see on {theme}"
 
 
 async def test_title_bar_shows_title_and_clock(make_app):

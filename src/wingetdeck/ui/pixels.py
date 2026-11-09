@@ -9,6 +9,8 @@ from rich.style import Style
 from rich.text import Text
 from textual.widget import Widget
 
+from .themes import DEFAULT_VARIABLES
+
 BOX = [
     ".......##.......",
     "......####......",
@@ -52,7 +54,8 @@ def _centred(rows: list[str], width: int) -> list[str]:
 
 WORD = _word("Winget")
 LOGO = _centred(BOX, len(WORD[0])) + ["." * len(WORD[0])] + WORD
-PALETTE = {"#": "#00ff22", "+": "#008f22", "T": "#ffffff"}
+# "$name" means a colour of the current theme, so the logo can be read on a light background too.
+PALETTE = {"#": "$wd-logo-box", "+": "$wd-logo-fill", "T": "$wd-logo-text"}
 
 
 class PixelArt(Widget):
@@ -72,9 +75,17 @@ class PixelArt(Widget):
         self.palette = palette
         self.ascii_mode = ascii_mode
 
+    def _colour(self, pixel: str) -> str | None:
+        colour = self.palette.get(pixel)
+        if colour and colour.startswith("$"):
+            name = colour[1:]
+            found = self.app.theme_variables.get(name) if self.is_attached else None
+            return found or DEFAULT_VARIABLES[name]
+        return colour
+
     def _cell(self, top: str, bottom: str) -> tuple[str, Style]:
-        top_colour = self.palette.get(top)
-        bottom_colour = self.palette.get(bottom)
+        top_colour = self._colour(top)
+        bottom_colour = self._colour(bottom)
         if self.ascii_mode:
             colour = top_colour or bottom_colour
             return ("#", Style(color=colour)) if colour else (" ", Style())

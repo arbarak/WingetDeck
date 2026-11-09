@@ -1,12 +1,15 @@
 import asyncio
 from dataclasses import replace
 
+import pytest
 from textual.widgets import Button, RichLog
 
 from wingetdeck.core.queue import ItemState, RunState
 from wingetdeck.ui.screens.dialogs import ConfirmDialog
 from wingetdeck.ui.screens.packages import PackagesScreen
+from wingetdeck.ui.pixels import PixelArt
 from wingetdeck.ui.screens.progress import ProgressScreen
+from wingetdeck.ui.themes import THEMES
 from wingetdeck.ui.widgets.meters import Meter, PercentBar, StageList, sparkline
 from wingetdeck.ui.widgets.queue_panel import QueuePanel
 from wingetdeck.winget.backend import FinishedEvent, ProgressEvent, StageEvent
@@ -90,6 +93,21 @@ class Scripted(FakeBackend):
                 yield FinishedEvent(0)
 
         return Handle()
+
+
+@pytest.mark.parametrize("theme", [t.name for t in THEMES])
+async def test_package_icon_stands_out_in_every_theme(make_app, faint_pixels, theme):
+    """The icon had fixed light colours, faint on the Light theme, both while working and once done."""
+    backend = Scripted([StageEvent(Stage.DOWNLOADING)])
+    app = make_app(backend)
+    async with app.run_test(size=WIDE) as pilot:
+        app.theme = theme
+        screen = await begin(app, pilot, ids=("A",), stage=Stage.DOWNLOADING)
+        icon = screen.query_one("#package-icon", PixelArt)
+        assert not faint_pixels(app, icon, 3), f"working icon hard to see on {theme}"
+        backend.release.set()
+        await finished(app, pilot)
+        assert not faint_pixels(app, icon, 3), f"done icon hard to see on {theme}"
 
 
 async def test_pause_label_during_download_with_direct_downloader(make_app):
