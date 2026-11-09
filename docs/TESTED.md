@@ -35,8 +35,9 @@ against the pretend winget in tests.
 
 ### Automated suite
 
-`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted. The latest count is in the
-final commit message. Two tests marked `real` read the real winget and are run on request.
+`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 465 passed at v1.0.0. A test
+marked `real` reads the real winget (passed) and one marked `real_download` downloads a package; both run only on
+request, and `real_download` was not rerun on the final code.
 
 ### Measured with real winget
 
@@ -51,7 +52,8 @@ See `docs/spikes/2026-11-09-sandbox-results.md`. These tested winget itself, bef
 
 ### The built exes
 
-Each was run on the owner's PC, in a pseudo console with no window on the desktop.
+Each was run on the owner's PC, in a pseudo console with no window on the desktop. Final builds:
+`dist\2026-11-09\140546\WingetDeck-x64.exe` and `dist\2026-11-09\140632\WingetDeck-x86.exe`.
 
 | Check | x64 | x86 |
 |---|---|---|
