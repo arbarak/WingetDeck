@@ -27,6 +27,9 @@ against the pretend winget in tests.
 | The taskbar progress colour | Only the code sent was checked | That the terminal shows it |
 | The Windows notification appearing | The script was run up to the point of showing it, so nothing popped up | That it appears |
 | Long unattended runs, real installer prompts | Not tried | |
+| A PC that has never accepted winget's source agreements | The owner's PC accepted them long ago | The app asks and scans again; this was tested against a pretend refusal, and the code comes from winget's table |
+| Agreement links before a download | No real package with agreements captured; written from the reviewer's reading of winget's output | Live progress for those packages |
+| What quitting during a real install does | Needs a real upgrade | The reviewer showed winget dies with the app, using a test child process, not a real install |
 
 ## Done
 

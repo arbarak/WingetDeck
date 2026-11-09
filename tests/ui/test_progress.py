@@ -362,9 +362,10 @@ async def test_stages_mark_where_the_package_is(make_app):
 
 async def test_stall_warning_appears(make_app):
     app = make_app(Scripted([StageEvent(Stage.INSTALLING)]))
-    app.runner._stall_seconds = 0.03
     app.runner._tick = 0.01
     async with app.run_test(size=WIDE) as pilot:
+        await pilot.pause()
+        app.runner._stall_seconds = 0.03  # after start-up, which applies the saved setting
         screen = await begin(app, pilot, ids=("A",), stage=Stage.INSTALLING)
         await until(lambda: app.runner.view.stalled)
         await pilot.pause()

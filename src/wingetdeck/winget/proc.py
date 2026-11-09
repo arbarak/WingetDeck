@@ -72,6 +72,25 @@ def all_pids() -> set[int]:
     return {pid for pid, _, _ in _snapshot()}
 
 
+def _started_at(pid: int) -> int | None:
+    """When the process started, or None if Windows will not say."""
+
+    def read(handle) -> int | bool:
+        times = [wintypes.FILETIME() for _ in range(4)]
+        if not _kernel32.GetProcessTimes(handle, *(ctypes.byref(t) for t in times)):
+            return False
+        return (times[0].dwHighDateTime << 32) | times[0].dwLowDateTime
+
+    return _with_handle(pid, _PROCESS_QUERY_LIMITED, read) or None
+
+
+def _may_be_child(parent_born: int | None, child_born: int | None) -> bool:
+    """Windows keeps a dead parent's id on its orphans and reuses ids, so a listed parent can be a
+    stranger. A process older than its listed parent cannot be its child. If either time is unknown it
+    counts as a child, because losing track of a running installer is the worse mistake."""
+    return parent_born is None or child_born is None or child_born >= parent_born
+
+
 def process_tree(pid: int) -> list[int]:
     """The process and everything under it, parents first. Empty if it no longer exists."""
     rows = _snapshot()
@@ -79,7 +98,10 @@ def process_tree(pid: int) -> list[int]:
         return []
     tree = [pid]
     for current in tree:
-        tree.extend(p for p, parent, _ in rows if parent == current and p not in tree)
+        born = _started_at(current)
+        for child, parent, _ in rows:
+            if parent == current and child not in tree and _may_be_child(born, _started_at(child)):
+                tree.append(child)
     return tree
 
 

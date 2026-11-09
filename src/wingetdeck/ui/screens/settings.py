@@ -137,6 +137,7 @@ class SettingsScreen(DeckScreen):
             create_restore_point=self.query_one("#restore-point", Checkbox).value,
         )
         app.store.save_settings(settings)
+        app.runner.set_stall_minutes(settings.stall_minutes)
         app.theme = theme
         app.backend.accept_source_agreements = consent
         app.log_file.info("Settings saved")

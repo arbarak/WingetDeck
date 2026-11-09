@@ -38,7 +38,9 @@ _TRUNCATED = "…"
 
 
 class WingetError(Exception):
-    pass
+    def __init__(self, message: str, code: int | None = None) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def build_upgrade_args(package: Package, options: UpgradeOptions, caps: Capabilities) -> list[str]:
@@ -244,7 +246,7 @@ class RealBackend:
         if check and code and code not in _NOTHING_TO_UPGRADE:
             info = explain(code)
             self._log.error("winget query failed", code=info.hex_code, meaning=info.message)
-            raise WingetError(f"{info.message} ({info.hex_code})")
+            raise WingetError(f"{info.message} ({info.hex_code})", code=code)
         return text
 
     def capabilities(self) -> Capabilities | None:

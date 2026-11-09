@@ -28,6 +28,7 @@ class UpgradeStream:
         self._stage: Stage | None = None
         self._buffer = ""
         self._pending = ""
+        self._download_over = False  # a bar was seen, or a later stage: no link can restart it
 
     def _set_stage(self, stage: Stage, out: list[Event]) -> None:
         if stage is not self._stage:
@@ -39,12 +40,16 @@ class UpgradeStream:
         if not line or line in _SPINNER:
             return
         stage = self._stages.feed(line)
-        if stage is None and self._stage is None and _URL.search(line):
+        # Winget prints a package's agreement links first, so a link means the download has begun only
+        # until a bar has been seen. In a language the detector cannot read, a link is all there is.
+        if stage is None and self._stage is not Stage.DOWNLOADING and _URL.search(line):
             stage = Stage.DOWNLOADING
         if stage is None and self._stage is Stage.DOWNLOADING:
             stage = Stage.WORKING
-        if stage is Stage.DOWNLOADING and self._stage is not None:
-            stage = None  # a second URL never restarts the download stage
+        if stage is Stage.DOWNLOADING and self._download_over:
+            stage = None
+        if stage not in (None, Stage.DOWNLOADING, Stage.WORKING):
+            self._download_over = True
         if stage is not None:
             self._set_stage(stage, out)
         out.append(OutputEvent(line))
@@ -66,13 +71,19 @@ class UpgradeStream:
             was_downloading = self._stage is Stage.DOWNLOADING
             self._on_line(line, out)
             if was_downloading and self._stage is not Stage.DOWNLOADING:
+                self._note_bars(readings)
                 self._add_progress(readings, out, before=self._last_stage_index(out))
                 readings = []
         if self._stage is Stage.DOWNLOADING:
+            self._note_bars(readings)
             self._add_progress(readings, out)
             if any(r.total_mb and r.percent == 100 for r in readings):
                 self._set_stage(Stage.WORKING, out)
         return out
+
+    def _note_bars(self, readings) -> None:
+        if any(r.total_mb is not None or r.percent is not None for r in readings):
+            self._download_over = True
 
     @staticmethod
     def _last_stage_index(out: list[Event]) -> int:

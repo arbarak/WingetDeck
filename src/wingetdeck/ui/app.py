@@ -20,14 +20,14 @@ from ..core.safety import SnapshotFailed, create_restore_point, take_snapshot
 from ..core.store import HistoryEntry, Store
 from ..paths import is_elevated
 from ..winget.backend import UpgradeOptions, WingetBackend
-from ..winget.models import ChangeKind, Package
+from ..winget.models import ChangeKind, Package, Stage
 from .notify import notify_done
 from .responsive import MEDIUM, WIDE, taskbar_code, title_text
 from .screens.dialogs import ConfirmDialog
 from .screens.history import HistoryScreen
 from .screens.logs import LogsScreen
 from .screens.no_winget import NoWingetScreen
-from .screens.packages import PackagesScreen
+from .screens.packages import PackagesScreen, run_is_active
 from .screens.progress import ProgressScreen
 from .screens.settings import SettingsScreen
 from .screens.splash import SplashScreen
@@ -46,6 +46,18 @@ _CONSENT = (
 _AGREE = "Accept agreements"
 _NO_AGREE = "Skip those packages"
 _GO_ON = "Go on without it"
+_QUIT_TITLE = "A run is going"
+_QUIT_AFTER = "Quit after this package"
+_QUIT_NOW = "Quit now"
+_QUIT_KEEPS = "Your queue is saved, and WingetDeck offers to continue it next time."
+_QUIT_INSTALLING = (
+    "This package may be installing. Quitting now ends winget along with this app. An installer that has "
+    "already started may carry on by itself, but the package could be left half-installed.\n\n" + _QUIT_KEEPS
+)
+_QUIT_DOWNLOADING = (
+    "A download is running. Quitting now stops winget, which can leave a partial file in its temp "
+    "folder. Nothing has been installed for this package yet.\n\n" + _QUIT_KEEPS
+)
 _RESUME = "Resume"
 _DISCARD = "Don't resume"
 
@@ -82,6 +94,7 @@ class WingetDeckApp(App):
         self._last_taskbar = ""
         self.notifier = notify_done
         self._notified = False
+        self._quit_when_finished = False
         super().__init__()
         runner.on_change = self._run_changed
         self.sub_title = f"v{__version__}"
@@ -94,7 +107,9 @@ class WingetDeckApp(App):
         return {**DEFAULT_VARIABLES, **super().get_css_variables()}
 
     def on_mount(self) -> None:
-        self.backend.accept_source_agreements = self.store.load_settings().consented_agreements
+        settings = self.store.load_settings()
+        self.backend.accept_source_agreements = settings.consented_agreements
+        self.runner.set_stall_minutes(settings.stall_minutes)
         self._show_on_taskbar(None)
         self.push_screen(SplashScreen())
 
@@ -110,6 +125,9 @@ class WingetDeckApp(App):
             listener(view)
         self._show_on_taskbar(view)
         self._notify_if_finished(view)
+        if self._quit_when_finished and view.state is RunState.FINISHED:
+            self._quit_when_finished = False
+            self.call_later(self._quit_now)
 
     def _notify_if_finished(self, view: RunView) -> None:
         if view.state is not RunState.FINISHED:
@@ -157,8 +175,18 @@ class WingetDeckApp(App):
             self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
             return
 
+        def answered(consent: bool | None) -> None:
+            if consent is not None:
+                self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+
+        self.ask_agreements(answered)
+
+    def ask_agreements(self, then: Callable[[bool | None], None], reason: str = "") -> None:
+        """Ask, remember the answer, and tell `then`: True, False, or None for Cancel, which is not remembered."""
+
         def answered(choice: str | None) -> None:
             if choice is None:
+                then(None)
                 return
             consent = choice == _AGREE
             self.store.save_settings(
@@ -166,9 +194,10 @@ class WingetDeckApp(App):
             )
             self.backend.accept_source_agreements = consent
             self.log_file.info("Agreements answered", consent=consent)
-            self.run_worker(self._begin_run(packages), group="run-start", exclusive=True)
+            then(consent)
 
-        self.push_screen(ConfirmDialog("Licence agreements", _CONSENT, (_AGREE, _NO_AGREE)), answered)
+        text = f"{reason}\n\n{_CONSENT}" if reason else _CONSENT
+        self.push_screen(ConfirmDialog("Licence agreements", text, (_AGREE, _NO_AGREE)), answered)
 
     def options_for(self, package: Package) -> UpgradeOptions:
         settings = self.store.load_settings()
@@ -287,5 +316,27 @@ class WingetDeckApp(App):
             self.push_screen(HistoryScreen())
 
     async def action_quit(self) -> None:
+        view = self.runner.view
+        if not run_is_active(view):
+            await self._quit_now()
+            return
+        if isinstance(self.screen, ConfirmDialog) and self.screen.dialog_title == _QUIT_TITLE:
+            return
+        text = _QUIT_DOWNLOADING if view.stage is Stage.DOWNLOADING else _QUIT_INSTALLING
+        dialog = ConfirmDialog(
+            _QUIT_TITLE, text, (_QUIT_AFTER, _QUIT_NOW), danger=(_QUIT_NOW,), cancel_label="Keep running"
+        )
+        self.push_screen(dialog, self._quit_answered)
+
+    def _quit_answered(self, choice: str | None) -> None:
+        if choice == _QUIT_NOW:
+            self.log_file.warn("Quit now pressed during a run")
+            self.call_later(self._quit_now)
+        elif choice == _QUIT_AFTER:
+            self.log_file.info("Quit after this package pressed")
+            self._quit_when_finished = True
+            self.runner.stop_after()
+
+    async def _quit_now(self) -> None:
         await self.runner.shutdown()
         self.exit()

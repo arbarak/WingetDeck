@@ -33,6 +33,9 @@ _OUTCOMES = {
 }
 
 
+SOURCE_AGREEMENTS_NOT_ACCEPTED = 0x8A150046
+
+
 @dataclass(frozen=True)
 class Explanation:
     outcome: Outcome

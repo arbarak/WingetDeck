@@ -243,27 +243,36 @@ class Runner:
     async def _one_attempt(self, item: RunItem) -> int:
         try:
             self._handle = self._starter(item.package, self._options_for(item.package))
-        except OSError as e:
+        except Exception as e:  # pywinpty raises its own error types
             self._log.error("Could not start winget", package=item.package.id, error=repr(e))
             item.message = f"Could not start winget: {e}"
             return _LOST_EXIT
         self._notify()
         code = _LOST_EXIT
-        async for event in self._handle.events():
-            if isinstance(event, ProgressEvent):
-                self._on_progress(event.progress)
-            elif isinstance(event, StageEvent):
-                self._on_activity()
-                self._queue.on_stage(event.stage)
-                if event.stage is not Stage.DOWNLOADING:
-                    self._samples.clear()
-                self._notify()
-            elif isinstance(event, OutputEvent):
-                self._on_activity()
-                self._line(event.line)
-                self._notify()
-            elif isinstance(event, FinishedEvent):
-                code = event.exit_code
+        try:
+            async for event in self._handle.events():
+                if isinstance(event, ProgressEvent):
+                    self._on_progress(event.progress)
+                elif isinstance(event, StageEvent):
+                    self._on_activity()
+                    self._queue.on_stage(event.stage)
+                    if event.stage is not Stage.DOWNLOADING:
+                        self._samples.clear()
+                    self._notify()
+                elif isinstance(event, OutputEvent):
+                    self._on_activity()
+                    self._line(event.line)
+                    self._notify()
+                elif isinstance(event, FinishedEvent):
+                    code = event.exit_code
+        except Exception as e:  # without an answer from winget the run must still move on
+            self._log.error("Lost contact with winget", package=item.package.id, error=repr(e))
+            item.message = f"Lost contact with winget: {e}"
+            try:
+                self._handle.kill()
+            except Exception as kill_error:
+                self._log.error("Could not stop winget", package=item.package.id, error=repr(kill_error))
+            return _LOST_EXIT
         return code
 
     def _on_activity(self) -> None:
@@ -421,6 +430,9 @@ class Runner:
         self._log.warn("Force stop pressed")
         return self._kill(self._queue.force_stop())
 
+    def set_stall_minutes(self, minutes: float) -> None:
+        self._stall_seconds = minutes * 60
+
     def emergency_stop(self) -> bool:
         """The console is closing and Windows is about to end this process, so no event loop can be
         relied on. A frozen winget would otherwise stay suspended for ever. Returns True when a
@@ -437,7 +449,7 @@ class Runner:
             return False
         frozen = q.state is RunState.PAUSED
         if not frozen and q.stage is not Stage.DOWNLOADING:
-            self._log.warn("Closed while an installer was running, it was left to finish",
+            self._log.warn("Closed while installing: winget ends with this app, the installer may carry on by itself",
                            package=q.active.package.id)
             return False
         if frozen:
@@ -448,7 +460,7 @@ class Runner:
         return result.killed
 
     async def shutdown(self) -> None:
-        """The window is closing. Nothing may stay frozen, an installer is left to finish, and what
+        """The window is closing. Nothing may stay frozen, an installer is not killed on purpose, and what
         was not finished is saved so it can be resumed next time."""
         if self._queue is None or self._driver is None or self._driver.done():
             return

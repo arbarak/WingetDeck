@@ -49,6 +49,10 @@ your settings file first, and Settings can undo it. If policy locks winget's set
 
 A partial download can be left in winget's temp folder after Stop.
 
+**Quitting during a run** asks first, and offers to quit once the current package is done. Winget does not outlive the
+app, so quitting or closing the window during an install ends winget: an installer that has started may carry on by
+itself, but the package could be left half-installed. Closing the window gives no chance to ask, so prefer **Quit**.
+
 If the app is closed, crashes or the PC restarts mid-run, it offers to continue the queue next time. Ending it from
 Task Manager while a download is frozen cannot unfreeze winget, so end the leftover `winget` process too.
 

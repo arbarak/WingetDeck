@@ -80,6 +80,8 @@ class SplashScreen(DeckScreen):
         data = self.app.log_file.data_dir
         if not data.portable:
             self._note(f"Data folder: {data.root}")
+        for note in self.app.store.corruption_notes:
+            self._note(note)
         self.load()
 
     def _note(self, text: str) -> None:
@@ -112,6 +114,7 @@ class SplashScreen(DeckScreen):
             return
         self.query_one("#versions", Static).update(f"winget {caps.version}  ·  Windows {platform.version()}")
         self.query_one("#start", Button).disabled = False  # All sources needs no list, which can be slow
+        app.offer_resume()  # before a new run could replace the saved queue
         try:
             names = await app.backend.sources()
         except Exception as e:  # All sources still works without the list
@@ -123,7 +126,6 @@ class SplashScreen(DeckScreen):
         await listing.extend(ListItem(Static(source_label(n), markup=False)) for n in names)
         listing.index = 0
         listing.focus()
-        app.offer_resume()
 
     def action_start(self) -> None:
         if self.query_one("#start", Button).disabled:
@@ -131,8 +133,8 @@ class SplashScreen(DeckScreen):
         index = self.query_one("#sources", SourceList).index or 0
         self.app.show_packages(self._choices[index])
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "start":
             self.action_start()
         elif event.button.id == "quit":
-            self.app.exit()
+            await self.app.action_quit()

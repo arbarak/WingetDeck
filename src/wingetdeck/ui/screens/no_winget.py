@@ -33,8 +33,8 @@ class NoWingetScreen(DeckScreen):
                 yield Button("Quit", id="quit", classes="red")
         yield Footer()
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "check-again":
             self.app.check_winget_again()
         elif event.button.id == "quit":
-            self.app.exit()
+            await self.app.action_quit()

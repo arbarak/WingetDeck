@@ -13,6 +13,8 @@ from ...core.queue import RunState
 from ...core.runner import RunView
 from ...core.selection import merge_scan
 from ...winget.models import ChangeKind
+from ...winget.real import WingetError
+from ...winget.codes import SOURCE_AGREEMENTS_NOT_ACCEPTED
 from ..widgets.package_table import PackageTable
 from .details import DetailsScreen
 from .base import DeckScreen, TitleBar
@@ -20,6 +22,7 @@ from .base import DeckScreen, TitleBar
 _REFRESH_BLOCKED = "Not available during an upgrade. It comes back when the run ends or pauses between packages."
 _ACTIONS_HEIGHT = 3
 _LOG_MIN = 4
+_AGREEMENTS_NEEDED = "Winget will not look for upgrades until its source agreements are accepted."
 _BARS_HEIGHT = 2
 _FILTER_HEIGHT = 3
 _ROWS_BEFORE_LOG = 10
@@ -131,11 +134,26 @@ class PackagesScreen(DeckScreen):
             except Exception as e:  # shown in the panel, the current rows stay
                 app.log_file.error("Scan failed", error=repr(e))
                 self._say("bad", f"Could not check for upgrades: {e}")
+                if isinstance(e, WingetError) and e.code == SOURCE_AGREEMENTS_NOT_ACCEPTED:
+                    self._ask_agreements()
                 return
             self._apply_scan(result, table)
         finally:
             self._scanning = False
             self._update_refresh()
+
+    def _ask_agreements(self) -> None:
+        """Winget will not list anything until its source agreements are accepted."""
+        if self.app.store.load_settings().consented_agreements:
+            return  # already accepted, and winget still refuses: asking again would not help
+
+        def answered(consent: bool | None) -> None:
+            if consent:
+                self.scan_packages(update_sources=False)
+            else:
+                self._say("warn", "Winget's source agreements are not accepted. You can change this in Settings.")
+
+        self.app.ask_agreements(answered, _AGREEMENTS_NEEDED)
 
     def _apply_scan(self, result, table: PackageTable) -> None:
         ignored = self.app.store.load_settings().ignored

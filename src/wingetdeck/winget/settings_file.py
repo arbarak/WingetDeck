@@ -14,6 +14,7 @@ from pathlib import Path
 from ..paths import stamp
 
 DIRECT = "wininet"
+_WINGET_DEFAULT = "default"
 _POLICY_KEY = r"SOFTWARE\Policies\Microsoft\Windows\AppInstaller"
 
 
@@ -130,20 +131,20 @@ def _insert_member(text: str, blank: str, brace: int, member: str) -> str:
     return text[: brace + 1] + f" {member}" + ("" if empty else ",") + text[brace + 1 :]
 
 
-def _with_downloader(text: str) -> str:
+def _with_downloader(text: str, value: str = DIRECT) -> str:
     if not text.strip():
-        return json.dumps({"network": {"downloader": DIRECT}}, indent=2) + "\n"
+        return json.dumps({"network": {"downloader": value}}, indent=2) + "\n"
     blank = _blank_comments(text)
     root = next(i for i, c in enumerate(blank) if not c.isspace())
     root_end = _value_end(blank, root)
     network = _find_key(blank, "network", root + 1, root_end - 1)
     if network < 0 or blank[network] != "{":
-        return _insert_member(text, blank, root, f'"network": {{"downloader": "{DIRECT}"}}')
+        return _insert_member(text, blank, root, f'"network": {{"downloader": "{value}"}}')
     network_end = _value_end(blank, network)
     existing = _find_key(blank, "downloader", network + 1, network_end - 1)
     if existing < 0:
-        return _insert_member(text, blank, network, f'"downloader": "{DIRECT}"')
-    return text[:existing] + f'"{DIRECT}"' + text[_value_end(blank, existing) :]
+        return _insert_member(text, blank, network, f'"downloader": "{value}"')
+    return text[:existing] + f'"{value}"' + text[_value_end(blank, existing) :]
 
 
 def enable_direct(path: Path, backups: Path) -> DownloaderChange:
@@ -158,16 +159,38 @@ def enable_direct(path: Path, backups: Path) -> DownloaderChange:
         backup = backups / f"winget_settings_{stamp()}.json"
         backup.write_bytes(original)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(path.name + ".wingetdeck.tmp")
-    temp.write_text(updated, encoding="utf-8")
-    os.replace(temp, path)
+    _replace(path, updated.encode("utf-8"))
     return DownloaderChange(existed, previous, backup)
 
 
+def _replace(path: Path, content: bytes) -> None:
+    # Bytes, not text: text mode would add a carriage return to every line of a file that has them.
+    temp = path.with_name(path.name + ".wingetdeck.tmp")
+    temp.write_bytes(content)
+    os.replace(temp, path)
+
+
 def undo(path: Path, change: DownloaderChange) -> None:
-    if change.previous_existed and change.backup:
-        temp = path.with_name(path.name + ".wingetdeck.tmp")
-        temp.write_bytes(change.backup.read_bytes())
-        os.replace(temp, path)
-    elif path.exists():
-        path.unlink()
+    """Put back what was there. If the file has changed since, only the one key goes back, and the file
+    as it stands now is kept first, because those later changes are the user's."""
+    has_backup = change.backup is not None and change.backup.exists()
+    if not path.exists():
+        if change.previous_existed and has_backup:
+            _replace(path, change.backup.read_bytes())
+        return
+    current = path.read_bytes()
+    if not change.previous_existed or has_backup:
+        original = change.backup.read_bytes() if has_backup else b""
+        if current == _with_downloader(original.decode("utf-8-sig")).encode("utf-8"):
+            if has_backup:
+                _replace(path, original)
+            else:
+                path.unlink()
+            return
+    if read_downloader(path) != DIRECT:
+        return  # the user has set it to something else since, and that is theirs
+    folder = change.backup.parent if change.backup is not None else path.parent
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"winget_settings_before_undo_{stamp()}.json").write_bytes(current)
+    value = change.previous_value or _WINGET_DEFAULT
+    _replace(path, _with_downloader(current.decode("utf-8-sig"), value).encode("utf-8"))
