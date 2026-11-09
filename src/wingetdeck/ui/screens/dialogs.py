@@ -1,4 +1,8 @@
-"""A question with buttons. Dismisses with the chosen text, or None for Cancel."""
+"""A question with buttons. Dismisses with the chosen text, or None for Cancel.
+
+Texts are given in English and shown in the chosen language. The answer is the English choice, so callers compare
+it with their own constants whatever the language.
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,11 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
+from ...i18n import N_, t
+
 
 class ConfirmDialog(ModalScreen[str | None]):
-    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+    BINDINGS = [Binding("escape", "cancel", N_("Cancel"))]
 
     def __init__(
         self,
@@ -18,7 +24,7 @@ class ConfirmDialog(ModalScreen[str | None]):
         text: str,
         choices: tuple[str, ...],
         danger: tuple[str, ...] = (),
-        cancel_label: str = "Cancel",
+        cancel_label: str = N_("Cancel"),
     ) -> None:
         super().__init__()
         self.dialog_title = title
@@ -29,13 +35,13 @@ class ConfirmDialog(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with VerticalScroll(id="dialog"):
-            yield Static(self.dialog_title, id="dialog-title", markup=False)
-            yield Static(self.text, id="dialog-text", markup=False)
+            yield Static(t(self.dialog_title), id="dialog-title", markup=False)
+            yield Static(t(self.text), id="dialog-text", markup=False)
             with Horizontal(id="dialog-buttons"):
                 for index, choice in enumerate(self.choices):
                     classes = "red" if choice in self.danger else "blue"
-                    yield Button(choice, id=f"choice-{index}", classes=classes)
-                yield Button(self.cancel_label, id="cancel", classes="gray")
+                    yield Button(t(choice), id=f"choice-{index}", classes=classes)
+                yield Button(t(self.cancel_label), id="cancel", classes="gray")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()

@@ -11,17 +11,18 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
-from textual.widgets import Button, Footer, OptionList, RichLog, Select, Static
+from textual.widgets import Button, OptionList, RichLog, Select, Static
 from textual.widgets.option_list import Option
 
 from ...core.logs import LogEvent, report_contents, save_diagnostic_report
 from ...winget.parse import strip_terminal_codes
 from .dialogs import ConfirmDialog
-from .base import DeckScreen, TitleBar
+from ...i18n import N_, t
+from .base import DeckScreen, Footer, TitleBar
 
 _LEVELS = ("ALL", "INFO", "WARN", "ERROR")
 _ALL_PACKAGES = "__all__"
-_SAVE = "Save report"
+_SAVE = N_("Save report")
 _LEVEL_STYLES = {"INFO": "#7fb7ff", "WARN": "#ffd75f", "ERROR": "bold #ff5a5a", "DEBUG": "#8a8a8a"}
 
 
@@ -42,7 +43,7 @@ def _user_name() -> str:
 class TranscriptScreen(DeckScreen):
     """Everything winget printed for one package."""
 
-    BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
+    BINDINGS = [Binding("escape", "app.pop_screen", N_("Back"))]
 
     def __init__(self, package_id: str, path: Path | None = None) -> None:
         super().__init__()
@@ -51,21 +52,24 @@ class TranscriptScreen(DeckScreen):
 
     def compose(self) -> ComposeResult:
         yield TitleBar()
-        yield Static(f"winget output for {self.package_id}", id="transcript-title", markup=False)
+        yield Static(t("winget output for {id}", id=self.package_id), id="transcript-title", markup=False)
         yield RichLog(id="transcript", wrap=True, markup=False, highlight=False)
         yield Footer()
+
+    def fresh(self) -> DeckScreen:
+        return TranscriptScreen(self.package_id, self.path)
 
     def on_mount(self) -> None:
         log = self.query_one(RichLog)
         path = self.path or self.app.log_file.transcript_for(self.package_id)
         if path is None:
-            log.write("There is no winget output for this package in this session.")
+            log.write(t("There is no winget output for this package in this session."))
             return
         log.write(str(path))
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError as e:
-            log.write(f"Could not read it: {e}")
+            log.write(t("Could not read it: {error}", error=e))
             return
         for line in strip_terminal_codes(text).replace("\r", "\n").splitlines():
             if line.strip():
@@ -73,7 +77,7 @@ class TranscriptScreen(DeckScreen):
 
 
 class LogsScreen(DeckScreen):
-    BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
+    BINDINGS = [Binding("escape", "app.pop_screen", N_("Back"))]
 
     def __init__(self) -> None:
         super().__init__()
@@ -86,11 +90,11 @@ class LogsScreen(DeckScreen):
         yield TitleBar()
         with Horizontal(id="logs-top"):
             for level in _LEVELS:
-                yield Button(level, id=f"level-{level}", classes="blue" if level == "ALL" else "gray", compact=True)
-            yield Select([("All packages", _ALL_PACKAGES)], value=_ALL_PACKAGES, allow_blank=False, id="package")
+                yield Button(t("ALL") if level == "ALL" else level, id=f"level-{level}", classes="blue" if level == "ALL" else "gray", compact=True)
+            yield Select([(t("All packages"), _ALL_PACKAGES)], value=_ALL_PACKAGES, allow_blank=False, id="package")
         with Horizontal(id="logs-actions"):
-            yield Button("Open logs folder", id="open-folder", classes="gray", compact=True)
-            yield Button("Save diagnostic report", id="save-report", classes="gray", compact=True)
+            yield Button(t("Open logs folder"), id="open-folder", classes="gray", compact=True)
+            yield Button(t("Save diagnostic report"), id="save-report", classes="gray", compact=True)
         yield Static(str(self.app.log_file.text_path), id="logs-path", markup=False)
         yield Static("", id="logs-note", markup=False)
         yield OptionList(id="log-events", markup=False)
@@ -111,7 +115,7 @@ class LogsScreen(DeckScreen):
         if getattr(self, "_package_names", None) != wanted:
             self._package_names = wanted
             current = select.value
-            select.set_options([("All packages", _ALL_PACKAGES), *[(n, n) for n in names]])
+            select.set_options([(t("All packages"), _ALL_PACKAGES), *[(n, n) for n in names]])
             select.value = current if current in wanted else _ALL_PACKAGES
 
     def redraw(self) -> None:
@@ -138,7 +142,7 @@ class LogsScreen(DeckScreen):
         if event.fields:
             text.append("  " + " ".join(f"{k}={v}" for k, v in event.fields.items()), style="#8a8a8a")
         if event.level == "ERROR" and event.package:
-            text.append("  see details", style="underline #00c8e8")
+            text.append("  " + t("see details"), style="underline #00c8e8")
         return text
 
     def open_event(self, index: int) -> None:
@@ -177,16 +181,16 @@ class LogsScreen(DeckScreen):
         try:
             os.startfile(folder)
         except OSError as e:
-            self._note(f"Could not open {folder}: {e}")
+            self._note(t("Could not open {folder}: {error}", folder=folder, error=e))
 
     def _ask_to_save(self) -> None:
         contents = report_contents(self.app.log_file, winget_log_folder())
-        text = (
+        text = t(
             "The report is saved on this PC only. Your Windows user name, custom installer arguments, "
-            "--header values and proxy passwords are removed.\n\nIt will contain:\n  "
-            + "\n  ".join(contents)
+            "--header values and proxy passwords are removed.\n\nIt will contain:\n  {contents}",
+            contents="\n  ".join(contents),
         )
-        self.app.push_screen(ConfirmDialog("Save a diagnostic report?", text, (_SAVE,)), self._save_answered)
+        self.app.push_screen(ConfirmDialog(N_("Save a diagnostic report?"), text, (_SAVE,)), self._save_answered)
 
     def _save_answered(self, choice: str | None) -> None:
         if choice == _SAVE:
@@ -204,7 +208,7 @@ class LogsScreen(DeckScreen):
             path = save_diagnostic_report(app.log_file, info, winget_log_folder(), _user_name())
         except OSError as e:
             app.log_file.error("Could not save the report", error=repr(e))
-            self._note(f"Could not save the report: {e}")
+            self._note(t("Could not save the report: {error}", error=e))
             return
         app.log_file.info("Diagnostic report saved", path=str(path))
-        self._note(f"Saved: {path}")
+        self._note(t("Saved: {path}", path=path))

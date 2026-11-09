@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..i18n import t
 from ..paths import DataDir, is_elevated, stamp
 from ..winget.backend import WingetBackend
 from .store import HistoryEntry
@@ -55,7 +56,7 @@ def create_restore_point(
     is_admin: Callable[[], bool] = is_elevated,
 ) -> RestoreResult:
     if not is_admin():
-        return RestoreResult(False, "A restore point needs administrator rights.")
+        return RestoreResult(False, t("A restore point needs administrator rights."))
     safe = _UNSAFE_DESCRIPTION.sub("", description)[:60] or "WingetDeck"
     command = f"Checkpoint-Computer -Description '{safe}' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop"
     try:
@@ -66,10 +67,10 @@ def create_restore_point(
             creationflags=_NO_WINDOW,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
-        return RestoreResult(False, f"Could not create a restore point: {e}")
+        return RestoreResult(False, t("Could not create a restore point: {reason}", reason=e))
     if done.returncode != 0:
         reason = done.stderr.decode("utf-8", errors="replace").strip()
-        return RestoreResult(False, f"Could not create a restore point: {reason}")
+        return RestoreResult(False, t("Could not create a restore point: {reason}", reason=reason))
     return RestoreResult(True)
 
 

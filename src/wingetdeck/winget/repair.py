@@ -19,6 +19,7 @@ import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ElementTree
 import zipfile
+from ..i18n import N_, t
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -113,7 +114,7 @@ class CheckedRedirects(urllib.request.HTTPRedirectHandler):
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if not address_allowed(newurl):
-            raise RepairError(f"The download tried to go to an address outside GitHub: {urlsplit(newurl).hostname}")
+            raise RepairError(t("The download tried to go to an address outside GitHub: {host}", host=urlsplit(newurl).hostname))
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -122,7 +123,7 @@ _opener = urllib.request.build_opener(CheckedRedirects)
 
 def open_checked(url: str, headers: Mapping[str, str] | None = None):
     if not address_allowed(url):
-        raise RepairError(f"Refused to open an address outside GitHub: {urlsplit(url).hostname}")
+        raise RepairError(t("Refused to open an address outside GitHub: {host}", host=urlsplit(url).hostname))
     request = urllib.request.Request(url, headers={"User-Agent": "WingetDeck", **(headers or {})})
     return _opener.open(request, timeout=_TIMEOUT)
 
@@ -145,12 +146,12 @@ def run_powershell(script: str, env: Mapping[str, str] | None = None, timeout: i
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except subprocess.TimeoutExpired as e:
-        raise RepairError(f"Windows did not finish within {timeout} seconds.") from e
+        raise RepairError(t("Windows did not finish within {seconds} seconds.", seconds=timeout)) from e
     except OSError as e:
-        raise RepairError(f"Windows PowerShell could not start: {e}") from e
+        raise RepairError(t("Windows PowerShell could not start: {error}", error=e)) from e
     if done.returncode:
         message = done.stderr.decode("utf-8", errors="replace").strip()
-        raise RepairError(" ".join(message.split())[:400] or f"Windows reported an error ({done.returncode}).")
+        raise RepairError(" ".join(message.split())[:400] or t("Windows reported an error ({code}).", code=done.returncode))
     return done.stdout.decode("utf-8", errors="replace").strip()
 
 
@@ -158,7 +159,7 @@ def open_store() -> None:
     try:
         os.startfile(STORE_LINK)
     except (OSError, AttributeError) as e:
-        raise RepairError("The Microsoft Store could not be opened on this PC.") from e
+        raise RepairError(t("The Microsoft Store could not be opened on this PC.")) from e
 
 
 class _RemoteFile:
@@ -197,7 +198,7 @@ class _RemoteFile:
         end = min(self._position + count, self._size) - 1
         with self._open(self._url, {"Range": f"bytes={self._position}-{end}"}) as response:
             if response.status != 206:
-                raise RepairError("GitHub did not allow reading part of the file, so it could not be checked first.")
+                raise RepairError(t("GitHub did not allow reading part of the file, so it could not be checked first."))
             self._buffer = response.read()
         self._start = self._position
 
@@ -267,7 +268,7 @@ class WingetRepair:
     def find_offer(self, build: int, architecture: str | None) -> Offer | None:
         """The newest stable winget that says it runs on this Windows build and processor."""
         if architecture is None:
-            raise RepairError("Could not tell what kind of processor this PC has.")
+            raise RepairError(t("Could not tell what kind of processor this PC has."))
         checked = 0
         for release in self._releases():
             if release.get("prerelease") or release.get("draft"):
@@ -289,11 +290,11 @@ class WingetRepair:
             with self._open(RELEASES_URL, {"Accept": "application/vnd.github+json"}) as response:
                 releases = json.loads(response.read())
         except _NETWORK_ERRORS as e:
-            raise RepairError(f"Could not reach GitHub to look for winget: {e}") from e
+            raise RepairError(t("Could not reach GitHub to look for winget: {error}", error=e)) from e
         except ValueError as e:
-            raise RepairError("GitHub sent an answer that could not be read.") from e
+            raise RepairError(t("GitHub sent an answer that could not be read.")) from e
         if not isinstance(releases, list):
-            raise RepairError("GitHub sent an answer that could not be read.")
+            raise RepairError(t("GitHub sent an answer that could not be read."))
         return releases
 
     def _minimum_build(self, bundle: Asset, architecture: str) -> int | None:
@@ -301,7 +302,7 @@ class WingetRepair:
             with zipfile.ZipFile(_RemoteFile(bundle.url, bundle.size, self._open)) as package:
                 return _read_bundle_info(package).min_builds.get(architecture)
         except _NETWORK_ERRORS as e:
-            raise RepairError(f"Could not reach GitHub to check winget: {e}") from e
+            raise RepairError(t("Could not reach GitHub to check winget: {error}", error=e)) from e
         except (zipfile.BadZipFile, ElementTree.ParseError, KeyError, ValueError, IndexError, StopIteration):
             return None
 
@@ -315,15 +316,18 @@ class WingetRepair:
         try:
             free = shutil.disk_usage(root).free
         except OSError as e:
-            raise RepairError(f"Could not use the temporary folder: {e}") from e
+            raise RepairError(t("Could not use the temporary folder: {error}", error=e)) from e
         if free < offer.space_needed:
             need = round(offer.space_needed / _MEGABYTE)
-            raise RepairError(f"Installing winget needs about {need} MB free on this drive, and only {free // _MEGABYTE} MB is free.")
+            raise RepairError(
+                t("Installing winget needs about {need} MB free on this drive, and only {free} MB is free.",
+                  need=need, free=free // _MEGABYTE)
+            )
         folder = root / f"{_WORK_FOLDER}{datetime.now():%Y%m%d-%H%M%S-%f}"
         try:
             folder.mkdir()
         except OSError as e:
-            raise RepairError(f"Could not use the temporary folder: {e}") from e
+            raise RepairError(t("Could not use the temporary folder: {error}", error=e)) from e
         try:
             self._download_check_install(offer, architecture, folder, progress, cancel)
         finally:
@@ -336,7 +340,7 @@ class WingetRepair:
         bundle = self._download(offer.bundle, folder, offer, done, progress, cancel)
         archive = self._download(offer.dependencies, folder, offer, done, progress, cancel)
 
-        progress("Checking Microsoft's signature…")
+        progress(N_("Checking Microsoft's signature…"))
         self._check_signature(bundle)
         self._check_identity(bundle)
         dependencies = self._unpack_dependencies(archive, architecture, folder)
@@ -345,7 +349,7 @@ class WingetRepair:
         if cancel.is_set():
             raise RepairCancelled
 
-        progress("Installing winget. This can take a few minutes…")
+        progress(N_("Installing winget. This can take a few minutes…"))  # sent in English: the screen looks for it
         self._powershell(
             "Add-AppxPackage -Path $env:WINGETDECK_BUNDLE -DependencyPath ($env:WINGETDECK_DEPENDENCIES -split '\\|')",
             {"WINGETDECK_BUNDLE": str(bundle), "WINGETDECK_DEPENDENCIES": "|".join(str(d) for d in dependencies)},
@@ -379,13 +383,13 @@ class WingetRepair:
                     percent = done[0] * 100 // max(offer.total_size, 1)
                     if percent != done[1]:
                         done[1] = percent
-                        progress(f"Downloading winget: {percent}% of {offer.total_megabytes} MB")
+                        progress(t("Downloading winget: {percent}% of {size} MB", percent=percent, size=offer.total_megabytes))
         except _NETWORK_ERRORS as e:
-            raise RepairError(f"The download stopped: {e}") from e
+            raise RepairError(t("The download stopped: {error}", error=e)) from e
         if cancel.is_set():
             raise RepairCancelled
         if received != asset.size or digest.hexdigest() != asset.sha256:
-            raise RepairError(f"{asset.name} does not match the checksum GitHub lists, so it was not installed.")
+            raise RepairError(t("{file} does not match the checksum GitHub lists, so it was not installed.", file=asset.name))
         return path
 
     def _check_signature(self, path: Path) -> None:
@@ -397,16 +401,16 @@ class WingetRepair:
         )
         status, _, signer = output.partition("|")
         if status.strip() != "Valid" or not _MICROSOFT_SIGNER.search(signer.strip()):
-            raise RepairError(f"{path.name} has no valid Microsoft signature, so it was not installed.")
+            raise RepairError(t("{file} has no valid Microsoft signature, so it was not installed.", file=path.name))
 
     def _check_identity(self, bundle: Path) -> None:
         try:
             with zipfile.ZipFile(bundle) as package:
                 info = _read_bundle_info(package)
         except (zipfile.BadZipFile, ElementTree.ParseError, KeyError, ValueError, IndexError, StopIteration, OSError) as e:
-            raise RepairError("The downloaded package could not be read, so it was not installed.") from e
+            raise RepairError(t("The downloaded package could not be read, so it was not installed.")) from e
         if info.name != PACKAGE_NAME or not info.publisher.startswith(_MICROSOFT_PUBLISHER):
-            raise RepairError("The downloaded package is not winget, so it was not installed.")
+            raise RepairError(t("The downloaded package is not winget, so it was not installed."))
 
     def _unpack_dependencies(self, archive: Path, architecture: str, folder: Path) -> list[Path]:
         wanted = re.compile(re.escape(architecture) + r"/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:appx|msix))")
@@ -421,7 +425,7 @@ class WingetRepair:
                             shutil.copyfileobj(source, out, _CHUNK)
                         unpacked.append(target)
         except (zipfile.BadZipFile, OSError) as e:
-            raise RepairError("The downloaded parts winget needs could not be unpacked.") from e
+            raise RepairError(t("The downloaded parts winget needs could not be unpacked.")) from e
         if not unpacked:
-            raise RepairError(f"This release has none of the parts winget needs on an {architecture} PC.")
+            raise RepairError(t("This release has none of the parts winget needs on an {architecture} PC.", architecture=architecture))
         return unpacked

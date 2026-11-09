@@ -7,6 +7,7 @@ import subprocess
 from collections.abc import Callable
 
 from ..core.queue import Summary
+from ..i18n import t
 
 # The text comes in through the environment, so a package name can never become part of a command.
 _SCRIPT = (
@@ -21,15 +22,16 @@ _SCRIPT = (
 
 
 def summary_text(summary: Summary) -> str:
-    restart = f"{summary.restart_needed} {'needs' if summary.restart_needed == 1 else 'need'} a restart"
+    one = summary.restart_needed == 1
+    restart = t("{count} needs a restart" if one else "{count} need a restart", count=summary.restart_needed)
     parts = [
-        (summary.done, f"{summary.done} upgraded"),
+        (summary.done, t("{count} upgraded", count=summary.done)),
         (summary.restart_needed, restart),
-        (summary.skipped, f"{summary.skipped} skipped"),
-        (summary.failed, f"{summary.failed} failed"),
-        (summary.stopped, f"{summary.stopped} stopped"),
+        (summary.skipped, t("{count} skipped", count=summary.skipped)),
+        (summary.failed, t("{count} failed", count=summary.failed)),
+        (summary.stopped, t("{count} stopped", count=summary.stopped)),
     ]
-    return ", ".join(text for count, text in parts if count) or "Nothing to do"
+    return ", ".join(text for count, text in parts if count) or t("Nothing to do")
 
 
 def notify_done(summary: Summary, spawn: Callable[..., object] = subprocess.Popen) -> bool:

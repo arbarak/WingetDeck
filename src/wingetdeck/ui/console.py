@@ -321,6 +321,19 @@ def user_locale() -> str:
     return locale.getlocale()[0] or "unknown"
 
 
+def ui_language() -> str:
+    """The language Windows shows its own menus in, such as fr-FR. It can differ from the format of dates and
+    numbers, which user_locale gives."""
+    buffer = ctypes.create_unicode_buffer(85)
+    try:
+        kernel = ctypes.windll.kernel32
+        if kernel.LCIDToLocaleName(kernel.GetUserDefaultUILanguage(), buffer, len(buffer), 0):
+            return buffer.value
+    except (OSError, AttributeError):
+        pass
+    return user_locale()
+
+
 def session_header(
     demo: bool, terminal: TerminalInfo, size: tuple[int, int], locale_name: str, elevated: bool
 ) -> dict[str, Any]:

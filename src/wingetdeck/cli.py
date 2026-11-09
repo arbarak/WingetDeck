@@ -22,6 +22,7 @@ from .ui.console import (
     font_has_glyph,
     session_header,
     tidy_classic_console,
+    ui_language,
     user_locale,
     windows_build,
 )
@@ -117,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
                 ascii_mode=args.ascii or terminal.ascii_recommended,
                 symbols=_symbols_for(terminal) if args.basic or terminal.basic_symbols else None,
                 tidy_console=tidy_classic_console if terminal.basic_symbols or terminal.ascii_recommended else None,
+                system_language=ui_language,
             )
             return _run(app, log, runner)
     except AlreadyRunning:

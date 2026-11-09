@@ -217,3 +217,10 @@ def test_an_unknown_font_size_changes_nothing():
 
 def test_a_minimised_window_changes_nothing():
     assert filled_size(client=(0, 0), font=(8, 16), buffer=(120, 30)) is None
+
+
+def test_the_language_windows_shows_is_read():
+    from wingetdeck.ui.console import ui_language
+
+    name = ui_language()
+    assert name and name[:2].isalpha() and name[:2].islower(), name

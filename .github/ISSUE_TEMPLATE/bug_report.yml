@@ -22,7 +22,7 @@ body:
     id: version
     attributes:
       label: WingetDeck version
-      description: It is at the top of the app's window, and in the exe's name, such as WingetDeck-1.0.3-x64.exe.
+      description: It is at the top of the app's window, and in the exe's name, such as WingetDeck-1.0.4-x64.exe.
       placeholder: "1.0.1"
     validations:
       required: true

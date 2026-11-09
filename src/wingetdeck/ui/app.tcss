@@ -329,8 +329,13 @@ PackageTable > .table--note {
 }
 
 #upgrade {
-    width: 15;
+    min-width: 15;
     margin-right: 0;
+}
+
+/* Major, Minor and Patch make room when every button cannot fit, in any language */
+#table-actions .-no-room {
+    display: none;
 }
 
 /* Progress screen */

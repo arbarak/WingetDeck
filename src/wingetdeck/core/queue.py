@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from ..i18n import N_
 from ..winget.codes import Outcome, explain
 from ..winget.models import ChangeKind, Package, Stage
 from .store import QueueItem, QueueSnapshot
@@ -68,10 +69,10 @@ class RunItem:
     in_use: bool = False
 
 
-STOP_AFTER = "Stop after this one"
-STOP_NOW = "Stop now"
-FORCE_STOP = "Force stop"
-STOP_PLAIN = "Stop"
+STOP_AFTER = N_("Stop after this one")
+STOP_NOW = N_("Stop now")
+FORCE_STOP = N_("Force stop")
+STOP_PLAIN = N_("Stop")
 
 
 class RunQueue:
@@ -157,7 +158,7 @@ class RunQueue:
         if self.active is None or self.stage is not Stage.DOWNLOADING:
             return Effect.NONE
         self._killing_as = ItemState.STOPPED
-        self._kill_message = "Stopped during download"
+        self._kill_message = N_("Stopped during download")
         self._stop_after = True
         frozen = self.state is RunState.PAUSED
         self.state = RunState.RUNNING
@@ -167,7 +168,7 @@ class RunQueue:
         if self.active is None:
             return Effect.NONE
         self._killing_as = ItemState.FAILED
-        self._kill_message = "Force stopped during install. This app may need reinstalling."
+        self._kill_message = N_("Force stopped during install. This app may need reinstalling.")
         self._stop_after = True
         return Effect.KILL
 
@@ -221,22 +222,22 @@ class RunQueue:
 
     def controls(self) -> Controls:
         if self.state is RunState.FINISHED or self.state is RunState.IDLE:
-            return Controls("Pause", False, ())
+            return Controls(N_("Pause"), False, ())
         if self.state is RunState.PAUSED:
             choices = (STOP_PLAIN,) if self.active is None else (STOP_AFTER, STOP_NOW)
-            return Controls("Resume", True, choices)
+            return Controls(N_("Resume"), True, choices)
         stop = (STOP_AFTER, STOP_NOW) if self.stage is Stage.DOWNLOADING else (STOP_AFTER, FORCE_STOP)
         if self._pause_after:
             if self.stage is Stage.INSTALLING:
-                label = "Pausing after this install…"
+                label = N_("Pausing after this install…")
             else:
-                label = "Pausing after this package…"
+                label = N_("Pausing after this package…")
             return Controls(label, False, stop)
         if self._can_freeze():
-            return Controls("Pause", True, stop)
+            return Controls(N_("Pause"), True, stop)
         if self.stage is Stage.INSTALLING:
-            return Controls("Pause after this install", True, stop)
-        return Controls("Pause after this package", True, stop)
+            return Controls(N_("Pause after this install"), True, stop)
+        return Controls(N_("Pause after this package"), True, stop)
 
     def _movable(self, item: RunItem) -> bool:
         return item.state is ItemState.WAITING and item.package.id not in RUG_PULL_IDS

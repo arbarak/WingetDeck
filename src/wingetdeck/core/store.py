@@ -31,6 +31,7 @@ class Settings:
     stall_minutes: int = 10
     moved_downloader: dict | None = None
     create_restore_point: bool = False
+    language: str = ""  # empty follows Windows
 
 
 @dataclass(frozen=True)
@@ -99,6 +100,7 @@ def _settings_from_json(data: dict) -> Settings:
         "offered_direct_downloader": bool,
         "stall_minutes": int,
         "create_restore_point": bool,
+        "language": str,
     }
     for key, kind in expected.items():
         if key in data:

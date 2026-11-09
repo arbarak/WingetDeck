@@ -9,32 +9,33 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical
-from textual.widgets import Button, Footer, ListItem, ListView, Static
+from textual.widgets import Button, ListItem, ListView, Static
 
 from ..pixels import BOX, LOGO, PALETTE, PixelArt
 from ..console import MIN_WINGET, winget_too_old
-from .base import DeckScreen, TitleBar
+from ...i18n import N_, t
+from .base import DeckScreen, Footer, TitleBar
 
-_ALL_SOURCES = "All sources"
+_ALL_SOURCES = N_("All sources")
 _LOGO_FULL_ROWS = 30
 _LOGO_SMALL_ROWS = 20
-_FRIENDLY = {"msstore": "Microsoft Store only"}
+_FRIENDLY = {"msstore": N_("Microsoft Store only")}
 
 
 def source_label(name: str) -> str:
-    return _FRIENDLY.get(name, f"{name} only")
+    return t(_FRIENDLY[name]) if name in _FRIENDLY else t("{name} only", name=name)
 
 
 class SourceList(ListView):
     """Enter means START here. A click only chooses."""
 
-    BINDINGS = [Binding("enter", "screen.start", "Start", show=False)]
+    BINDINGS = [Binding("enter", "screen.start", N_("Start"), show=False)]
 
 
 class SplashScreen(DeckScreen):
     BINDINGS = [
-        Binding("s", "start", "Start"),
-        Binding("q", "app.quit", "Quit"),
+        Binding("s", "start", N_("Start")),
+        Binding("q", "app.quit", N_("Quit")),
     ]
 
     def __init__(self) -> None:
@@ -48,14 +49,14 @@ class SplashScreen(DeckScreen):
             with Center():
                 yield PixelArt(LOGO, PALETTE, ascii_mode=self.app.ascii_mode, id="logo")
             with Center():
-                yield Static("Select a source and press START", id="prompt")
+                yield Static(t("Select a source and press START"), id="prompt")
             with Center():
                 with Horizontal(id="splash-row"):
-                    yield SourceList(ListItem(Static(_ALL_SOURCES, markup=False)), id="sources")
-                    yield Button("START", id="start", disabled=True)
+                    yield SourceList(ListItem(Static(t(_ALL_SOURCES), markup=False)), id="sources")
+                    yield Button(t("START"), id="start", disabled=True)
                     yield Button("✕" if not self.app.ascii_mode else "x", id="quit", classes="red")
             with Center():
-                yield Static("Looking for winget…", id="versions", markup=False)
+                yield Static(t("Looking for winget…"), id="versions", markup=False)
             with Center():
                 yield Static("", id="notes", markup=False)
         yield Footer()
@@ -79,7 +80,7 @@ class SplashScreen(DeckScreen):
         self.query_one("#sources", SourceList).index = 0
         data = self.app.log_file.data_dir
         if not data.portable:
-            self._note(f"Data folder: {data.root}")
+            self._note(t("Data folder: {folder}", folder=data.root))
         for note in self.app.store.corruption_notes:
             self._note(note)
         self.load()
@@ -112,7 +113,10 @@ class SplashScreen(DeckScreen):
         )
         if winget_too_old(caps.version):
             needed = ".".join(str(part) for part in MIN_WINGET)
-            app.show_no_winget(f"This PC has winget {caps.version}. WingetDeck needs {needed} or newer.", too_old=True)
+            app.show_no_winget(
+                t("This PC has winget {version}. WingetDeck needs {needed} or newer.", version=caps.version, needed=needed),
+                too_old=True,
+            )
             return
         self.query_one("#versions", Static).update(f"winget {caps.version}  ·  Windows {platform.version()}")
         self.query_one("#start", Button).disabled = False  # All sources needs no list, which can be slow
@@ -121,7 +125,7 @@ class SplashScreen(DeckScreen):
             names = await app.backend.sources()
         except Exception as e:  # All sources still works without the list
             app.log_file.error("Could not list sources", error=repr(e))
-            self._note(f"Could not list winget sources: {e}")
+            self._note(t("Could not list winget sources: {error}", error=e))
             names = []
         if not self.query("#sources"):
             return

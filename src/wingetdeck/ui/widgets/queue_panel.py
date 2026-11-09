@@ -8,6 +8,7 @@ from textual.message import Message
 from textual.widgets import Button, Static
 
 from ...core.queue import ItemState, RunItem
+from ...i18n import N_, t
 
 _MARKS = {
     ItemState.WAITING: (" ", " "),
@@ -19,10 +20,10 @@ _MARKS = {
     ItemState.STOPPED: ("■", "#"),
 }
 _NOTES = {
-    ItemState.DONE_RESTART: "restart needed",
-    ItemState.SKIPPED: "skipped",
-    ItemState.FAILED: "failed",
-    ItemState.STOPPED: "stopped",
+    ItemState.DONE_RESTART: N_("restart needed"),
+    ItemState.SKIPPED: N_("skipped"),
+    ItemState.FAILED: N_("failed"),
+    ItemState.STOPPED: N_("stopped"),
 }
 
 
@@ -71,7 +72,7 @@ class QueuePanel(VerticalScroll):
     def _row(self, item: RunItem) -> Horizontal:
         mark = _MARKS[item.state][1 if self.ascii_mode else 0]
         note = _NOTES.get(item.state)
-        text = f"{mark} {item.package.name}" + (f" ({note})" if note else "")
+        text = f"{mark} {item.package.name}" + (f" ({t(note)})" if note else "")
         label = Static(text, classes=f"queue-name state-{item.state.value}", markup=False)
         if item.state is not ItemState.WAITING:
             return Horizontal(label, classes="queue-row")

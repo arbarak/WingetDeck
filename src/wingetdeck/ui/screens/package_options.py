@@ -7,15 +7,16 @@ from dataclasses import replace
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
-from textual.widgets import Button, Footer, Static
+from textual.widgets import Button, Static
 
 from ...winget.models import Package
 from ..widgets.options_form import OptionsForm
-from .base import DeckScreen, TitleBar
+from ...i18n import N_, t
+from .base import DeckScreen, Footer, TitleBar
 
 
 class PackageOptionsScreen(DeckScreen):
-    BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
+    BINDINGS = [Binding("escape", "app.pop_screen", N_("Back"))]
 
     def __init__(self, package: Package) -> None:
         super().__init__()
@@ -26,12 +27,15 @@ class PackageOptionsScreen(DeckScreen):
         options = settings.per_package.get(self.package.id, settings.defaults)
         yield TitleBar()
         with VerticalScroll(id="settings-body"):
-            yield Static(f"Options for {self.package.name}", classes="form-title", markup=False)
+            yield Static(t("Options for {name}", name=self.package.name), classes="form-title", markup=False)
             yield OptionsForm(options, id="package-form")
             with Horizontal(id="options-buttons"):
-                yield Button("Save", id="save-options")
-                yield Button("Use the defaults", id="clear-options", classes="gray")
+                yield Button(t("Save"), id="save-options")
+                yield Button(t("Use the defaults"), id="clear-options", classes="gray")
         yield Footer()
+
+    def fresh(self) -> DeckScreen:
+        return PackageOptionsScreen(self.package)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         store = self.app.store

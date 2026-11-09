@@ -6,6 +6,8 @@ from __future__ import annotations
 from collections import deque
 
 from rich.text import Text
+
+from ...i18n import N_, t
 from textual.widget import Widget
 
 from ...winget.models import Progress, Stage
@@ -119,9 +121,9 @@ class PercentBar(Widget):
 class StageList(Widget):
     DEFAULT_CSS = "StageList { width: 1fr; height: auto; }"
     _ORDER = [
-        (Stage.DOWNLOADING, "Download"),
-        (Stage.VERIFYING, "Verify hash"),
-        (Stage.INSTALLING, "Install"),
+        (Stage.DOWNLOADING, N_("Download")),
+        (Stage.VERIFYING, N_("Verify hash")),
+        (Stage.INSTALLING, N_("Install")),
     ]
 
     def __init__(self, ascii_mode: bool = False, **kwargs) -> None:
@@ -139,16 +141,17 @@ class StageList(Widget):
         done, now = ("x", ">") if self.ascii_mode else ("✓", "›")
         position = next((n for n, (s, _) in enumerate(self._ORDER) if s is self.stage), -1)
         lines = []
-        for index, (_, label) in enumerate(self._ORDER):
+        for index, (_, english) in enumerate(self._ORDER):
+            label = t(english)
             if self.all_done or index < position:
                 lines.append((f"{done} {label}", "$wd-lime"))
             elif index == position:
                 lines.append((f"{now} {label}", "bold $wd-cyan"))
             else:
                 lines.append((f"  {label}", "$wd-dim"))
-        lines.append((f"{done if self.all_done else ' '} Done", "$wd-lime" if self.all_done else "$wd-dim"))
+        lines.append((f"{done if self.all_done else ' '} {t('Done')}", "$wd-lime" if self.all_done else "$wd-dim"))
         if self.stage is Stage.WORKING:
-            lines[0] = (f"{now} Working…" if not self.ascii_mode else f"{now} Working", "bold $wd-cyan")
+            lines[0] = (f"{now} {t('Working…')}" if not self.ascii_mode else f"{now} {t('Working')}", "bold $wd-cyan")
         return lines
 
     def render(self) -> Text:

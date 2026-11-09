@@ -13,6 +13,7 @@ from textual.widgets import Button, Static
 
 from ...winget.backend import PackageDetails
 from ...winget.models import Package
+from ...i18n import N_, t
 from .package_options import PackageOptionsScreen
 
 _DASH = "—"
@@ -21,14 +22,14 @@ _DASH = "—"
 def details_text(package: Package, details: PackageDetails) -> str:
     return (
         f"{package.name}\n{package.id}\n{package.installed} → {package.available}\n\n"
-        f"Publisher: {details.publisher or _DASH}\n"
-        f"Homepage: {details.homepage or _DASH}\n\n"
-        f"Release notes:\n{details.release_notes or _DASH}"
+        + t("Publisher: {value}", value=details.publisher or _DASH) + "\n"
+        + t("Homepage: {value}", value=details.homepage or _DASH) + "\n\n"
+        + t("Release notes:") + f"\n{details.release_notes or _DASH}"
     )
 
 
 class DetailsScreen(ModalScreen[None]):
-    BINDINGS = [Binding("escape", "close", "Close")]
+    BINDINGS = [Binding("escape", "close", N_("Close"))]
 
     def __init__(self, package: Package) -> None:
         super().__init__()
@@ -38,15 +39,15 @@ class DetailsScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         with Vertical(id="details"):
             with VerticalScroll(id="details-scroll"):
-                yield Static("Asking winget…", id="details-text", markup=False)
+                yield Static(t("Asking winget…"), id="details-text", markup=False)
             with Horizontal(id="details-buttons"):
                 yield Button(self._pin_label(), id="pin", classes="blue")
-                yield Button("Ignore", id="ignore", classes="gray")
-                yield Button("Options", id="options", classes="gray")
-                yield Button("Close", id="close", classes="gray")
+                yield Button(t("Ignore"), id="ignore", classes="gray")
+                yield Button(t("Options"), id="options", classes="gray")
+                yield Button(t("Close"), id="close", classes="gray")
 
     def _pin_label(self) -> str:
-        return "Unpin" if self.pinned else "Pin"
+        return t("Unpin") if self.pinned else t("Pin")
 
     def on_mount(self) -> None:
         self.load()
@@ -59,7 +60,7 @@ class DetailsScreen(ModalScreen[None]):
             details = await app.backend.show(self.package.id)
         except Exception as e:  # shown here, the rest of this panel still works
             app.log_file.warn("winget show failed", package=self.package.id, error=repr(e))
-            text.update(f"{details_text(self.package, PackageDetails())}\n\nCould not ask winget: {e}")
+            text.update(f"{details_text(self.package, PackageDetails())}\n\n" + t("Could not ask winget: {error}", error=e))
             return
         text.update(details_text(self.package, details))
 
@@ -92,7 +93,7 @@ class DetailsScreen(ModalScreen[None]):
                 await app.backend.pin_add(self.package.id)
         except Exception as e:  # say why the button did nothing
             app.log_file.error("Pin change failed", package=self.package.id, error=repr(e))
-            self.query_one("#details-text", Static).update(f"Could not change the pin: {e}")
+            self.query_one("#details-text", Static).update(t("Could not change the pin: {error}", error=e))
             return
         self.pinned = not self.pinned
         self.query_one("#pin", Button).label = self._pin_label()

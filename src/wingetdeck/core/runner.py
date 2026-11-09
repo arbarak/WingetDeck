@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime
 
+from ..i18n import N_, t
 from ..winget.backend import (
     FinishedEvent,
     OutputEvent,
@@ -31,7 +32,7 @@ _SPEED_SAMPLES = 8
 _SHUTDOWN_WAIT_SECONDS = 5
 _OUTPUT_KEPT = 300
 _FAILURES = {Outcome.FAILED, Outcome.FAILED_IN_USE, Outcome.FAILED_RESTART_FIRST}
-_DENIED_MESSAGE = (
+_DENIED_MESSAGE = N_(
     "Windows would not let this app stop the installer, because it is running as administrator. "
     "It will carry on until it finishes."
 )
@@ -146,7 +147,7 @@ class Runner:
             else:
                 self._store.save_queue(self._queue.snapshot())
         except OSError as e:
-            self._last_error = f"Could not save the queue: {e}"
+            self._last_error = t("Could not save the queue: {error}", error=e)
             self._log.error("Could not save the queue", error=repr(e))
 
     def _changed(self) -> None:
@@ -194,7 +195,7 @@ class Runner:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            self._last_error = f"The run stopped unexpectedly: {e}"
+            self._last_error = t("The run stopped unexpectedly: {error}", error=e)
             self._log.error("Run stopped unexpectedly", error=repr(e))
             self._notify()
         else:
@@ -215,7 +216,7 @@ class Runner:
         self._reset_for_package()
         self._was_frozen = False
         self._retried = False
-        self._line(f"Upgrading {item.package.name}")
+        self._line(t("Upgrading {name}", name=item.package.name))
         while True:
             code = await self._one_attempt(item)
             if self._closing:
@@ -226,7 +227,7 @@ class Runner:
                                code=explain(code).hex_code)
                 self._reset_for_package()
                 self._queue.restart_active()
-                self._line(f"{item.package.name}: the download failed after the pause, trying once more")
+                self._line(t("{name}: the download failed after the pause, trying once more", name=item.package.name))
                 self._notify()
                 continue
             break
@@ -245,7 +246,7 @@ class Runner:
             self._handle = self._starter(item.package, self._options_for(item.package))
         except Exception as e:  # pywinpty raises its own error types
             self._log.error("Could not start winget", package=item.package.id, error=repr(e))
-            item.message = f"Could not start winget: {e}"
+            item.message = t("Could not start winget: {error}", error=e)
             return _LOST_EXIT
         self._notify()
         code = _LOST_EXIT
@@ -267,7 +268,7 @@ class Runner:
                     code = event.exit_code
         except Exception as e:  # without an answer from winget the run must still move on
             self._log.error("Lost contact with winget", package=item.package.id, error=repr(e))
-            item.message = f"Lost contact with winget: {e}"
+            item.message = t("Lost contact with winget: {error}", error=e)
             try:
                 self._handle.kill()
             except Exception as kill_error:
@@ -308,7 +309,7 @@ class Runner:
         self._samples.clear()
         self._stalled = False
         self._history(item)
-        said = item.message or item.state.value
+        said = t(item.message) if item.message else item.state.value
         ok = item.state is ItemState.DONE
         self._line(f"{item.package.name}: {said}" if ok else f"{item.package.name}: {said} ({item.code})")
         self._changed()
@@ -416,7 +417,7 @@ class Runner:
         if result.access_denied or not result.killed:
             self._kill_sent = False
             self._queue.kill_refused()
-            self._last_error = _DENIED_MESSAGE
+            self._last_error = t(_DENIED_MESSAGE)
             self._log.warn("Windows refused to stop the process", denied=result.access_denied)
         self._changed()
         return result

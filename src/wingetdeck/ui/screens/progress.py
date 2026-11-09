@@ -10,9 +10,9 @@ from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Footer, RichLog, Static
+from textual.widgets import Button, RichLog, Static
 
-from ...core.queue import ItemState, RunState
+from ...core.queue import FORCE_STOP, STOP_AFTER, STOP_NOW, STOP_PLAIN, ItemState, RunState
 from ...core.runner import RunView
 from ...winget.models import Stage
 from ..pixels import BOX, PixelArt
@@ -20,25 +20,22 @@ from ..responsive import layout_band
 from ..widgets.meters import Meter, PercentBar, StageList, clock
 from ..widgets.queue_panel import QueuePanel
 from .dialogs import ConfirmDialog
-from .base import DeckScreen, TitleBar
+from ...i18n import N_, t
+from .base import DeckScreen, Footer, TitleBar
 
-STOP_AFTER = "Stop after this one"
-STOP_NOW = "Stop now"
-FORCE_STOP = "Force stop"
-STOP_PLAIN = "Stop"
-_TURN_ON = "Turn it on"
+_TURN_ON = N_("Turn it on")
 _SAMPLE_SECONDS = 0.5
 _ANIMATION_SECONDS = 0.15
 _CHIPS = {
-    Stage.DOWNLOADING: "DOWNLOADING",
-    Stage.VERIFYING: "VERIFYING",
-    Stage.INSTALLING: "INSTALLING",
-    Stage.WORKING: "WORKING",
+    Stage.DOWNLOADING: N_("DOWNLOADING"),
+    Stage.VERIFYING: N_("VERIFYING"),
+    Stage.INSTALLING: N_("INSTALLING"),
+    Stage.WORKING: N_("WORKING"),
 }
 _ICON_PALETTE = {"#": "#00c8e8", "+": "#0a6fdc"}
 _ICON_DONE = {"#": "#66dd00", "+": "#3c8a00"}
 
-_OFFER = (
+_OFFER = N_(
     "This download cannot be held right now. Windows' download service carries it on even if winget "
     "is frozen, so a true Pause needs winget's direct downloader.\n\n"
     "Turning it on changes one winget setting (network.downloader) for all winget use on this PC, "
@@ -48,16 +45,12 @@ _OFFER = (
 )
 
 
-def _plural(count: int, one: str, many: str) -> str:
-    return f"{count} {one if count == 1 else many}"
-
-
 class ProgressScreen(DeckScreen):
     AUTO_FOCUS = "#pause"
     BINDINGS = [
-        Binding("p", "pause_resume", "Pause/Resume"),
-        Binding("s", "stop", "Stop"),
-        Binding("b", "back", "Packages"),
+        Binding("p", "pause_resume", N_("Pause/Resume")),
+        Binding("s", "stop", N_("Stop")),
+        Binding("b", "back", N_("Packages")),
         Binding("escape", "back", show=False),
     ]
 
@@ -73,21 +66,21 @@ class ProgressScreen(DeckScreen):
         ascii_mode = self.app.ascii_mode
         yield TitleBar()
         with Horizontal(id="run-top"):
-            yield Button("< Packages" if ascii_mode else "‹ Packages", id="back", classes="gray")
+            yield Button(f"{'<' if ascii_mode else '‹'} {t('Packages')}", id="back", classes="gray")
             yield Static("", id="run-name", markup=False)
             yield Static("", id="chip", markup=False)
             yield Static("", id="run-count", markup=False)
             yield Static("", id="run-gap")
-            yield Button("Pause", id="pause", classes="blue")
-            yield Button("Stop" if ascii_mode else "■ Stop", id="stop", classes="red")
-            yield Button("Retry failed", id="retry")
+            yield Button(t("Pause"), id="pause", classes="blue")
+            yield Button(t("Stop") if ascii_mode else f"■ {t('Stop')}", id="stop", classes="red")
+            yield Button(t("Retry failed"), id="retry")
         yield Static("", id="run-status", markup=False)
         with Horizontal(id="run-mid"):
             with Vertical(id="run-icon"):
                 yield PixelArt(BOX, _ICON_PALETTE, ascii_mode=ascii_mode, id="package-icon")
             with Vertical(id="run-meters"):
-                yield Meter("download", ascii_mode, id="meter-speed")
-                yield Meter("received", ascii_mode, id="meter-received")
+                yield Meter(t("download"), ascii_mode, id="meter-speed")
+                yield Meter(t("received"), ascii_mode, id="meter-received")
             with Vertical(id="run-state"):
                 yield PercentBar(ascii_mode, id="percent")
                 yield StageList(ascii_mode, id="stages")
@@ -95,14 +88,14 @@ class ProgressScreen(DeckScreen):
         yield Static("", id="item-notes", markup=False)
         yield Static("", id="notice", markup=False)
         with Horizontal(id="run-tabs"):
-            yield Button("LOG", id="tab-log", classes="blue", compact=True)
-            yield Button("QUEUE", id="tab-queue", classes="gray", compact=True)
+            yield Button(t("LOG"), id="tab-log", classes="blue", compact=True)
+            yield Button(t("QUEUE"), id="tab-queue", classes="gray", compact=True)
         with Horizontal(id="run-bottom"):
             with Vertical(id="log-box") as box:
-                box.border_title = "LOG"
+                box.border_title = t("LOG")
                 yield RichLog(id="run-log", wrap=False, markup=False, highlight=False)
             with Vertical(id="queue-box") as box:
-                box.border_title = "QUEUE"
+                box.border_title = t("QUEUE")
                 yield QueuePanel(ascii_mode, id="queue")
         yield Footer()
 
@@ -118,7 +111,7 @@ class ProgressScreen(DeckScreen):
             self.query_one("#log-box").display = True
             self.query_one("#queue-box").display = True
         arrow = "<" if self.app.ascii_mode else "‹"
-        self.query_one("#back", Button).label = arrow if narrow else f"{arrow} Packages"
+        self.query_one("#back", Button).label = arrow if narrow else f"{arrow} {t('Packages')}"
 
     def on_mount(self) -> None:
         self.query_one("#summary").display = False
@@ -130,13 +123,16 @@ class ProgressScreen(DeckScreen):
         self.app.add_run_listener(self.on_run_view)
         self.on_run_view(self.app.runner.view)
 
+    def on_unmount(self) -> None:
+        self.app.remove_run_listener(self.on_run_view)
+
     def new_run(self) -> None:
         """Keeps the log of the earlier run on screen, but measures afresh."""
         self._seen_output = 0
         self._notice = ""
         self.query_one("#meter-speed", Meter).clear()
         self.query_one("#meter-received", Meter).clear()
-        self.query_one("#run-log", RichLog).write(Text("── new run ──", style="dim"))
+        self.query_one("#run-log", RichLog).write(Text(f"── {t('new run')} ──", style="dim"))
 
     # Showing the state of the run
 
@@ -153,15 +149,15 @@ class ProgressScreen(DeckScreen):
     def _chip(self, view: RunView) -> tuple[str, str]:
         if view.state is RunState.FINISHED:
             bad = view.summary is not None and view.summary.failed > 0
-            return ("FINISHED", "bad" if bad else "good")
+            return (t("FINISHED"), "bad" if bad else "good")
         if view.state is RunState.PAUSED:
-            return ("PAUSED", "hold")
+            return (t("PAUSED"), "hold")
         if view.stage in _CHIPS:
-            return (_CHIPS[view.stage], "busy")
-        return ("STARTING", "busy")
+            return (t(_CHIPS[view.stage]), "busy")
+        return (t("STARTING"), "busy")
 
     def _show_top(self, view: RunView) -> None:
-        name = view.active_name or ("All done" if view.state is RunState.FINISHED else "Waiting")
+        name = view.active_name or (t("All done") if view.state is RunState.FINISHED else t("Waiting"))
         self.query_one("#run-name", Static).update(name)
         text, kind = self._chip(view)
         chip = self.query_one("#chip", Static)
@@ -179,8 +175,9 @@ class ProgressScreen(DeckScreen):
         stop = self.query_one("#stop", Button)
         pause.display = stop.display = running
         if running:
-            if str(pause.label) != view.controls.pause_label:
-                pause.label = view.controls.pause_label
+            label = t(view.controls.pause_label)
+            if str(pause.label) != label:
+                pause.label = label
                 pause.refresh(layout=True)
             pause.disabled = not view.controls.pause_enabled
         failed = view.summary is not None and view.summary.failed > 0
@@ -190,9 +187,9 @@ class ProgressScreen(DeckScreen):
         progress = view.progress
         moving = view.state is RunState.RUNNING
         caption = {
-            RunState.PAUSED: "Paused",
-            RunState.FINISHED: "Finished",
-        }.get(view.state, "Working…" if not self.app.ascii_mode else "Working")
+            RunState.PAUSED: t("Paused"),
+            RunState.FINISHED: t("Finished"),
+        }.get(view.state, t("Working…") if not self.app.ascii_mode else t("Working"))
         self.query_one(PercentBar).show(progress, view.elapsed_s, caption, moving)
         self.query_one(StageList).show(view.stage, view.state is RunState.FINISHED)
         speed = self.query_one("#meter-speed", Meter)
@@ -234,28 +231,29 @@ class ProgressScreen(DeckScreen):
         summary.display = finished
         if finished:
             s = view.summary
-            parts = [f"{s.done} upgraded"]
+            parts = [t("{count} upgraded", count=s.done)]
             if s.restart_needed:
-                parts.append(_plural(s.restart_needed, "needs a restart", "need a restart"))
+                one = s.restart_needed == 1
+                parts.append(t("{count} needs a restart" if one else "{count} need a restart", count=s.restart_needed))
             if s.skipped:
-                parts.append(f"{s.skipped} skipped")
+                parts.append(t("{count} skipped", count=s.skipped))
             if s.failed:
-                parts.append(f"{s.failed} failed")
+                parts.append(t("{count} failed", count=s.failed))
             if s.stopped:
-                parts.append(f"{s.stopped} stopped")
-            summary.update("Finished: " + ", ".join(parts))
+                parts.append(t("{count} stopped", count=s.stopped))
+            summary.update(t("Finished: {parts}", parts=", ".join(parts)))
 
     @staticmethod
     def _reason(item) -> str:
         name = item.package.name
         if item.in_use:
-            return f"{name} is in use. Close it yourself, then press Retry failed. ({item.code})"
-        return f"{name}: {item.message} ({item.code})"
+            return t("{name} is in use. Close it yourself, then press Retry failed. ({code})", name=name, code=item.code)
+        return f"{name}: {t(item.message)} ({item.code})"
 
     def _show_notice(self, view: RunView) -> None:
-        lines = [line for line in (self._notice, view.last_error) if line]
+        lines = [line for line in (self._notice, t(view.last_error or "")) if line]
         if view.stalled:
-            lines.append("No output from winget for a while. It may just be slow, so nothing was stopped.")
+            lines.append(t("No output from winget for a while. It may just be slow, so nothing was stopped."))
         notice = self.query_one("#notice", Static)
         notice.display = bool(lines)
         if lines:
@@ -318,7 +316,7 @@ class ProgressScreen(DeckScreen):
     def _offer_direct_downloader(self) -> None:
         store = self.app.store
         store.save_settings(replace(store.load_settings(), offered_direct_downloader=True))
-        dialog = ConfirmDialog("Pause during a download", _OFFER, (_TURN_ON,), cancel_label="Not now")
+        dialog = ConfirmDialog(N_("Pause during a download"), _OFFER, (_TURN_ON,), cancel_label=N_("Not now"))
         self.app.push_screen(dialog, self._offer_answered)
 
     def _offer_answered(self, choice: str | None) -> None:
@@ -329,12 +327,12 @@ class ProgressScreen(DeckScreen):
             change = app.backend.enable_direct_downloader(app.log_file.data_dir.state)
         except Exception as e:  # shown to the user: nothing changed and pausing stays as it was
             app.log_file.error("Could not turn on the direct downloader", error=repr(e))
-            self.say(f"The winget setting could not be changed: {e}")
+            self.say(t("The winget setting could not be changed: {error}", error=e))
             return
         stored = {**asdict(change), "backup": str(change.backup) if change.backup else None}
         app.store.save_settings(replace(app.store.load_settings(), moved_downloader=stored))
         app.runner.set_direct_downloader(True)
-        self.say("The direct downloader is on from the next package. Settings has an Undo.")
+        self.say(t("The direct downloader is on from the next package. Settings has an Undo."))
 
     def action_stop(self) -> None:
         view = self.app.runner.view
@@ -342,48 +340,52 @@ class ProgressScreen(DeckScreen):
         if not choices:
             return
         self.app.push_screen(
-            ConfirmDialog("Stop the upgrade run?", self._stop_text(view), choices, danger=(STOP_NOW, FORCE_STOP)),
+            ConfirmDialog(N_("Stop the upgrade run?"), self._stop_text(view), choices, danger=(STOP_NOW, FORCE_STOP)),
             self._stop_answered,
         )
 
     def _stop_text(self, view: RunView) -> str:
-        after = "Stop after this one lets the current package finish, then stops the rest."
         if STOP_PLAIN in view.controls.stop_choices:
-            return "The packages still waiting will not be upgraded."
+            return t("The packages still waiting will not be upgraded.")
+        after = t("Stop after this one lets the current package finish, then stops the rest.")
         if FORCE_STOP in view.controls.stop_choices:
-            return (
-                f"{after}\n\nAn installer is running. Force stop ends it midway, which is only for an "
+            more = t(
+                "An installer is running. Force stop ends it midway, which is only for an "
                 "installer that has hung. You will be asked once more."
             )
-        if view.direct_downloader:
-            return (
-                f"{after}\n\nStop now ends the download and nothing will install. A partial file may be left "
+        elif view.direct_downloader:
+            more = t(
+                "Stop now ends the download and nothing will install. A partial file may be left "
                 "in winget's temporary folder."
             )
-        return (
-            f"{after}\n\nStop now ends winget and nothing will install, but Windows' download service may "
-            "finish the download in the background, and that file may stay in winget's temporary folder."
-        )
+        else:
+            more = t(
+                "Stop now ends winget and nothing will install, but Windows' download service may "
+                "finish the download in the background, and that file may stay in winget's temporary folder."
+            )
+        return f"{after}\n\n{more}"
 
     def _stop_answered(self, choice: str | None) -> None:
         runner = self.app.runner
         if choice in (STOP_AFTER, STOP_PLAIN):
             runner.stop_after()
-            self.say("Stopping after this package.") if choice == STOP_AFTER else None
+            self.say(t("Stopping after this package.")) if choice == STOP_AFTER else None
         elif choice == STOP_NOW:
             if runner.stop_now() is None:
-                self.say("Not stopped: an installer has started, and ending one midway can break the app.")
+                self.say(t("Not stopped: an installer has started, and ending one midway can break the app."))
             elif not runner.view.direct_downloader:
-                self.say("Stopped. Windows' download service may still finish the download in the background.")
+                self.say(t("Stopped. Windows' download service may still finish the download in the background."))
         elif choice == FORCE_STOP:
             self.app.push_screen(
                 ConfirmDialog(
-                    "Force stop this installer?",
-                    "Ending an installer midway can leave the app broken until it is reinstalled. "
-                    "Use this only if the installer has hung.",
+                    N_("Force stop this installer?"),
+                    N_(
+                        "Ending an installer midway can leave the app broken until it is reinstalled. "
+                        "Use this only if the installer has hung."
+                    ),
                     (FORCE_STOP,),
                     danger=(FORCE_STOP,),
-                    cancel_label="Keep going",
+                    cancel_label=N_("Keep going"),
                 ),
                 self._force_answered,
             )

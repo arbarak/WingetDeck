@@ -10,9 +10,10 @@ from pathlib import Path
 from textual.app import App
 from textual.driver import Driver
 from textual.binding import Binding
-from textual.screen import ModalScreen
+from textual.screen import ModalScreen, Screen
 
-from .. import __version__
+from .. import __version__, i18n
+from ..i18n import N_, t
 from ..core.logs import SessionLog
 from ..core.queue import ItemState, RunQueue, RunState
 from ..core.runner import Runner, RunView
@@ -36,7 +37,7 @@ from .symbols import to_ascii
 from .themes import DEFAULT_THEME, DEFAULT_VARIABLES, THEMES
 
 
-_CONSENT = (
+_CONSENT = N_(
     "Many packages come with licence agreements, and winget's sources have terms of their own. "
     "Winget stops and asks about these, but an upgrade running here cannot answer it.\n\n"
     "To go on without being asked, WingetDeck can add --accept-package-agreements and "
@@ -45,36 +46,36 @@ _CONSENT = (
     "Without this, packages that need it are marked as skipped. You can change it in Settings."
 )
 _CONSOLE_SETTLE_SECONDS = 0.3  # the classic console puts its scrollbars back just after a resize
-_AGREE = "Accept agreements"
-_NO_AGREE = "Skip those packages"
-_GO_ON = "Go on without it"
-_QUIT_TITLE = "A run is going"
-_QUIT_AFTER = "Quit after this package"
-_QUIT_NOW = "Quit now"
-_QUIT_KEEPS = "Your queue is saved, and WingetDeck offers to continue it next time."
-_QUIT_INSTALLING = (
+_AGREE = N_("Accept agreements")
+_NO_AGREE = N_("Skip those packages")
+_GO_ON = N_("Go on without it")
+_QUIT_TITLE = N_("A run is going")
+_QUIT_AFTER = N_("Quit after this package")
+_QUIT_NOW = N_("Quit now")
+_QUIT_KEEPS = N_("Your queue is saved, and WingetDeck offers to continue it next time.")
+_QUIT_INSTALLING = N_(
     "This package may be installing. Quitting now ends winget along with this app. An installer that has "
-    "already started may carry on by itself, but the package could be left half-installed.\n\n" + _QUIT_KEEPS
+    "already started may carry on by itself, but the package could be left half-installed."
 )
-_QUIT_DOWNLOADING = (
+_QUIT_DOWNLOADING = N_(
     "A download is running. Quitting now stops winget, which can leave a partial file in its temp "
-    "folder. Nothing has been installed for this package yet.\n\n" + _QUIT_KEEPS
+    "folder. Nothing has been installed for this package yet."
 )
-_RESUME = "Resume"
-_DISCARD = "Don't resume"
+_RESUME = N_("Resume")
+_DISCARD = N_("Don't resume")
 
 _NOTIFY_AFTER_SECONDS = 60  # a shorter run is one the person is probably still watching
 
 
 class WingetDeckApp(App):
-    TITLE = "WingetDeck — Package Upgrader"
+    TITLE = N_("WingetDeck — Package Upgrader")
     CSS_PATH = Path(__file__).parent / "app.tcss"
     HORIZONTAL_BREAKPOINTS = [(0, "-narrow"), (MEDIUM, "-medium"), (WIDE, "-wide")]
     VERTICAL_BREAKPOINTS = [(0, "-short"), (20, "-compact"), (30, "-tall")]
     BINDINGS = [
-        Binding("l", "show_logs", "Logs"),
-        Binding("t", "show_settings", "Settings"),
-        Binding("h", "show_history", "History"),
+        Binding("l", "show_logs", N_("Logs")),
+        Binding("t", "show_settings", N_("Settings")),
+        Binding("h", "show_history", N_("History")),
     ]
 
     def __init__(
@@ -87,6 +88,7 @@ class WingetDeckApp(App):
         symbols: Callable[[str], str] | None = None,
         tidy_console: Callable[[], None] | None = None,
         repair: WingetRepair | None = None,
+        system_language: Callable[[], str] | None = None,
     ) -> None:
         self.backend = backend
         self.store = store
@@ -104,6 +106,7 @@ class WingetDeckApp(App):
         self.notifier = notify_done
         self._notified = False
         self._quit_when_finished = False
+        self.system_language = system_language or (lambda: "en")
         super().__init__()
         runner.on_change = self._run_changed
         self.sub_title = f"v{__version__}"
@@ -111,6 +114,7 @@ class WingetDeckApp(App):
             self.register_theme(theme)
         settings = store.load_settings()
         self.theme = settings.theme if settings.theme in self.available_themes else DEFAULT_THEME
+        i18n.set_language(i18n.choose(settings.language, self.system_language()))
 
     def get_css_variables(self) -> dict[str, str]:
         return {**DEFAULT_VARIABLES, **super().get_css_variables()}
@@ -119,6 +123,8 @@ class WingetDeckApp(App):
         settings = self.store.load_settings()
         self.backend.accept_source_agreements = settings.consented_agreements
         self.runner.set_stall_minutes(settings.stall_minutes)
+        self.log_file.info("Language", language=i18n.current(), setting=settings.language or "automatic",
+                           windows=self.system_language())
         self._show_on_taskbar(None)
         self.push_screen(SplashScreen())
         self._tidy_console()
@@ -222,8 +228,8 @@ class WingetDeckApp(App):
             self.log_file.info("Agreements answered", consent=consent)
             then(consent)
 
-        text = f"{reason}\n\n{_CONSENT}" if reason else _CONSENT
-        self.push_screen(ConfirmDialog("Licence agreements", text, (_AGREE, _NO_AGREE)), answered)
+        text = f"{t(reason)}\n\n{t(_CONSENT)}" if reason else _CONSENT
+        self.push_screen(ConfirmDialog(N_("Licence agreements"), text, (_AGREE, _NO_AGREE)), answered)
 
     def options_for(self, package: Package) -> UpgradeOptions:
         settings = self.store.load_settings()
@@ -249,16 +255,19 @@ class WingetDeckApp(App):
 
     async def _safety_steps(self) -> bool:
         """False means the user chose not to go on."""
-        self.notify("Saving the list of installed apps before starting…", timeout=4)
+        self.notify(t("Saving the list of installed apps before starting…"), timeout=4)
         try:
             path = await take_snapshot(self.backend, self.log_file.data_dir)
             self.log_file.info("Snapshot saved", path=str(path))
         except SnapshotFailed as e:
             self.log_file.warn("Snapshot failed", error=str(e))
             dialog = ConfirmDialog(
-                "Could not save the list of installed apps",
-                f"Before each run a list of installed versions is saved, so there is a record of how "
-                f"things were. This time it failed: {e}\n\nGo on without it?",
+                N_("Could not save the list of installed apps"),
+                t(
+                    "Before each run a list of installed versions is saved, so there is a record of how "
+                    "things were. This time it failed: {error}\n\nGo on without it?",
+                    error=e,
+                ),
                 (_GO_ON,),
             )
             if await self.push_screen_wait(dialog) != _GO_ON:
@@ -290,12 +299,13 @@ class WingetDeckApp(App):
                 self.store.clear_queue(keep_copy=True)
                 self.log_file.info("Queue declined, a copy was kept", count=count)
 
-        text = (
-            f"The last run did not finish: {names}{'…' if count > 5 else ''}.\n\n"
-            "An interrupted download starts again from the beginning."
+        text = t(
+            "The last run did not finish: {names}.\n\nAn interrupted download starts again from the beginning.",
+            names=names + ("…" if count > 5 else ""),
         )
+        title = t("Resume unfinished queue ({count} left)?", count=count)
         self.push_screen(
-            ConfirmDialog(f"Resume unfinished queue ({count} left)?", text, (_RESUME, _DISCARD), cancel_label="Ask me later"),
+            ConfirmDialog(title, text, (_RESUME, _DISCARD), cancel_label=N_("Ask me later")),
             answered,
         )
 
@@ -309,9 +319,38 @@ class WingetDeckApp(App):
         self.run_worker(self._begin_run([package], starter), group="run-start", exclusive=True)
 
     def progress_screen(self) -> ProgressScreen:
-        if not self.is_screen_installed("progress"):
-            self.install_screen(ProgressScreen(), "progress")
+        if self.is_screen_installed("progress"):
+            screen = self.get_screen("progress")
+            if screen.language == i18n.current() or screen in self.screen_stack:
+                return screen
+            self.uninstall_screen("progress")  # drawn in the earlier language and not on show: start afresh
+            screen.remove()
+        self.install_screen(ProgressScreen(), "progress")
         return self.get_screen("progress")
+
+    def apply_language(self, setting: str) -> None:
+        """The screen on top redraws itself. Each one below gets a fresh copy when it comes back into view."""
+        i18n.set_language(i18n.choose(setting, self.system_language()))
+        self.log_file.info("Language chosen", language=i18n.current(), setting=setting or "automatic")
+        if self.screen_stack:
+            self.refresh_bindings()
+
+    async def renew_screen(self, screen: Screen) -> None:
+        """Replace a screen drawn in the earlier language, once it is back on top."""
+        if self.screen is not screen or screen.language == i18n.current():
+            return
+        progress = self.is_screen_installed("progress") and self.get_screen("progress") is screen
+        if progress and run_is_active(self.runner.view):
+            return  # the run's screen keeps its words until the run is over
+        fresh = ProgressScreen() if progress else screen.fresh()
+        if fresh is None:
+            screen.language = i18n.current()
+            return
+        await self.switch_screen(fresh)
+        if progress:
+            self.uninstall_screen("progress")
+            await screen.remove()
+            self.install_screen(fresh, "progress")
 
     def show_progress(self) -> None:
         screen = self.progress_screen()
@@ -352,9 +391,9 @@ class WingetDeckApp(App):
             return
         if isinstance(self.screen, ConfirmDialog) and self.screen.dialog_title == _QUIT_TITLE:
             return
-        text = _QUIT_DOWNLOADING if view.stage is Stage.DOWNLOADING else _QUIT_INSTALLING
+        text = t(_QUIT_DOWNLOADING if view.stage is Stage.DOWNLOADING else _QUIT_INSTALLING) + "\n\n" + t(_QUIT_KEEPS)
         dialog = ConfirmDialog(
-            _QUIT_TITLE, text, (_QUIT_AFTER, _QUIT_NOW), danger=(_QUIT_NOW,), cancel_label="Keep running"
+            _QUIT_TITLE, text, (_QUIT_AFTER, _QUIT_NOW), danger=(_QUIT_NOW,), cancel_label=N_("Keep running")
         )
         self.push_screen(dialog, self._quit_answered)
 

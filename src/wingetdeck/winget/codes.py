@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from ..i18n import N_
 from .code_table import CODES
 
 
@@ -47,10 +48,10 @@ def explain(exit_code: int) -> Explanation:
     code = exit_code & 0xFFFFFFFF
     hex_code = f"0x{code:08X}"
     if code == 0:
-        return Explanation(Outcome.SUCCESS, hex_code, "Upgraded")
+        return Explanation(Outcome.SUCCESS, hex_code, N_("Upgraded"))
     entry = CODES.get(code)
     if code == _AGREEMENTS_CODE:
-        message = "This package has licence agreements. Turn on accepting agreements in Settings to upgrade it."
+        message = N_("This package has licence agreements. Turn on accepting agreements in Settings to upgrade it.")
     elif entry:
         message = entry[1]
     else:

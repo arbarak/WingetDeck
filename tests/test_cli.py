@@ -80,3 +80,22 @@ def test_close_handler_survives_a_failing_callback():
         raise ValueError("no")
 
     assert make_ctrl_handler(broken)(CTRL_CLOSE)
+
+
+def test_the_app_is_told_which_language_windows_shows(data, monkeypatch):
+    given = {}
+
+    class Catch:
+        return_code = 0
+        _exception = None
+
+        def __init__(self, *a, **kw):
+            given.update(kw)
+
+        def run(self):
+            return None
+
+    monkeypatch.setattr(cli, "WingetDeckApp", Catch)
+    monkeypatch.setattr(cli, "ui_language", lambda: "fr-FR")
+    cli.main(["--demo"])
+    assert given["system_language"]() == "fr-FR"

@@ -6,6 +6,7 @@ from typing import Literal
 
 from ..core.queue import ItemState, RunState
 from ..core.runner import RunView
+from ..i18n import t
 
 WIDE = 120
 MEDIUM = 80
@@ -25,11 +26,11 @@ def title_text(view: RunView | None) -> str:
     if view is None or view.state is RunState.IDLE:
         return _APP
     if view.state is RunState.FINISHED:
-        return f"Done · {_APP}"
+        return f"{t('Done')} · {_APP}"
     finished = sum(1 for i in view.items if i.state not in (ItemState.WAITING, ItemState.ACTIVE))
     position = f"{min(finished + 1, len(view.items))}/{len(view.items)}"
     if view.state is RunState.PAUSED:
-        return f"{position} · Paused · {_APP}"
+        return f"{position} · {t('Paused')} · {_APP}"
     if view.progress is not None and view.progress.percent is not None:
         return f"{position} · {view.progress.percent:.0f}% · {_APP}"
     return f"{position} · {_APP}"

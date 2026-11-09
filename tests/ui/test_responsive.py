@@ -43,8 +43,9 @@ async def until(check, seconds=8.0):
     await asyncio.wait_for(poll(), seconds)
 
 
-def asked(app):
-    app.store.save_settings(replace(app.store.load_settings(), asked_agreements=True))
+def asked(app, language=""):
+    app.store.save_settings(replace(app.store.load_settings(), asked_agreements=True, language=language))
+    app.apply_language(language)
 
 
 def assert_buttons_inside(app, width, height):
@@ -55,10 +56,11 @@ def assert_buttons_inside(app, width, height):
         assert region.right <= width and region.x >= 0, f"{button} {region} at {width}x{height}"
 
 
+@pytest.mark.parametrize("language", ["en", "fr"])
 @pytest.mark.parametrize("w,h", SIZES)
-async def test_every_screen_renders_without_overflow(make_app, w, h):
+async def test_every_screen_renders_without_overflow(make_app, w, h, language):
     app = make_app(FakeBackend(demo_packages(), speed=2))
-    asked(app)
+    asked(app, language)
     async with app.run_test(size=(w, h)) as pilot:
         await pilot.pause()
         await app.workers.wait_for_complete()
@@ -85,10 +87,11 @@ async def test_every_screen_renders_without_overflow(make_app, w, h):
         await app.runner.shutdown()
 
 
+@pytest.mark.parametrize("language", ["en", "fr"])
 @pytest.mark.parametrize("w,h", SIZES)
-async def test_key_buttons_stay_reachable(make_app, w, h):
+async def test_key_buttons_stay_reachable(make_app, w, h, language):
     app = make_app(FakeBackend(demo_packages(), speed=2))
-    asked(app)
+    asked(app, language)
     async with app.run_test(size=(w, h)) as pilot:
         await pilot.pause()
         app.start_upgrade(demo_packages()[:2])

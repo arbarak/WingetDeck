@@ -16,6 +16,7 @@ from textual.reactive import reactive
 from textual.scroll_view import ScrollView
 from textual.strip import Strip
 
+from ...i18n import N_, t
 from ...winget.models import ChangeKind, Package
 
 _TICK_WIDTH = 3
@@ -27,15 +28,21 @@ _SHARING_COLUMNS = 5  # name, id, installed, available, source; the change colum
 _WIDE = 120
 _MEDIUM = 80
 _RANK = {ChangeKind.MAJOR: 0, ChangeKind.MINOR: 1, ChangeKind.PATCH: 2, ChangeKind.UNKNOWN: 3}
+_CHANGES = {
+    ChangeKind.MAJOR: N_("major"),
+    ChangeKind.MINOR: N_("minor"),
+    ChangeKind.PATCH: N_("patch"),
+    ChangeKind.UNKNOWN: N_("unknown"),
+}
 _TITLES = {
     "tick": "",
-    "name": "NAME",
+    "name": N_("NAME"),
     "id": "ID",
-    "installed": "INSTALLED",
-    "available": "AVAILABLE",
-    "versions": "VERSION",
-    "source": "SOURCE",
-    "change": "CHANGE",
+    "installed": N_("INSTALLED"),
+    "available": N_("AVAILABLE"),
+    "versions": N_("VERSION"),
+    "source": N_("SOURCE"),
+    "change": N_("CHANGE"),
 }
 
 
@@ -72,7 +79,7 @@ def columns(width: int, rows: list[Package]) -> list[Column]:
         Column("installed", installed),
         Column("available", available),
         Column("source", source),
-        Column("change", 8),
+        Column("change", max(8, *(cell_len(t(word)) for word in _CHANGES.values()))),
     ]
     used = _TICK_WIDTH + sum(c.width for c in fixed)
     if width < _WIDE:
@@ -122,7 +129,7 @@ class PackageTable(ScrollView, can_focus=True):
         Binding("pagedown", "move(10)", show=False),
         Binding("home", "move(-100000)", show=False),
         Binding("end", "move(100000)", show=False),
-        Binding("space", "tick_cursor", "Tick"),
+        Binding("space", "tick_cursor", N_("Tick")),
     ]
 
     include_pinned: reactive[bool] = reactive(False)
@@ -314,7 +321,7 @@ class PackageTable(ScrollView, can_focus=True):
             if column.key == "tick":
                 title = "[x]" if self.ascii_mode else "[✓]"
             else:
-                title = _TITLES[column.key]
+                title = t(_TITLES[column.key])
                 if column.key == self.sort_key:
                     up, down = ("^", "v") if self.ascii_mode else ("▲", "▼")
                     title = f"{up if self.sort_reverse else down} {title}"
@@ -324,11 +331,11 @@ class PackageTable(ScrollView, can_focus=True):
     def _notes(self, package: Package) -> list[str]:
         notes = []
         if package.pinned:
-            notes.append("pinned")
+            notes.append(t("pinned"))
         if package.explicit_only:
-            notes.append("explicit")
+            notes.append(t("explicit"))
         if package.truncated_id:
-            notes.append("id cut off")
+            notes.append(t("id cut off"))
         return notes
 
     def _row(self, index: int, width: int) -> Strip:
@@ -365,13 +372,13 @@ class PackageTable(ScrollView, can_focus=True):
             return [Segment(fit(f"{package.installed} {arrow} {package.available}", column.width, cut), base)]
         if column.key == "change":
             word = package.change.value
-            return [Segment(fit(word, column.width, cut), styled(f"table--{word}"))]
+            return [Segment(fit(t(_CHANGES[package.change]), column.width, cut), styled(f"table--{word}"))]
         return [Segment(fit(getattr(package, column.key) or "", column.width, cut), base)]
 
     def _name_cell(self, package: Package, width: int, base: Style, styled) -> list[Segment]:
         tags: list[tuple[str, str]] = []
         if package.id in self.new_ids:
-            tags.append((" NEW ", "table--new"))
+            tags.append((f" {t('NEW')} ", "table--new"))
         for note in self._notes(package):
             tags.append((f"({note})", "table--note"))
         tag_cells = sum(cell_len(text) + 1 for text, _ in tags)

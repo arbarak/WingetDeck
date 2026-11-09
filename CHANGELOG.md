@@ -3,6 +3,24 @@
 Found a problem that is not listed here?
 [Report it](https://github.com/arbarak/WingetDeck/issues/new/choose) and it can be fixed in the next release.
 
+## 1.0.4, 9 November 2026
+
+### Added
+
+- **English or French.** Press `t` for Settings: Language is the first line. Pick English, Français or Automatic, and the
+  screen changes straight away, with nothing to restart. Automatic follows the language Windows shows. Every screen,
+  button, message and key hint is translated. Logs stay in English, and winget's own messages stay as winget writes
+  them.
+- Arabic was tried and is not offered: the Windows console has no right-to-left support, so Arabic words come out
+  reversed.
+
+### Fixed
+
+- **The UPGRADE button now shows how many packages are ticked**, such as `UPGRADE (3)`. The count was always cut off.
+- When the row of buttons under the table is too narrow for all of them, Major, Minor and Patch make room, so UPGRADE
+  is never pushed out of the window.
+- History shows `done, restart needed` instead of `done_restart`.
+
 ## 1.0.3, 9 November 2026
 
 ### Changed

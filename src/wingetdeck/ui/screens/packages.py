@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from rich.cells import cell_len
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.markup import escape
-from textual.widgets import Button, Footer, Input, Static
+from textual.widgets import Button, Input, Static
 
 from ...core.queue import RunState
 from ...core.runner import RunView
@@ -17,16 +18,18 @@ from ...winget.real import WingetError
 from ...winget.codes import SOURCE_AGREEMENTS_NOT_ACCEPTED
 from ..widgets.package_table import PackageTable
 from .details import DetailsScreen
-from .base import DeckScreen, TitleBar
+from ...i18n import N_, t
+from .base import DeckScreen, Footer, TitleBar
 
-_REFRESH_BLOCKED = "Not available during an upgrade. It comes back when the run ends or pauses between packages."
+_REFRESH_BLOCKED = N_("Not available during an upgrade. It comes back when the run ends or pauses between packages.")
 _ACTIONS_HEIGHT = 3
 _LOG_MIN = 4
-_AGREEMENTS_NEEDED = "Winget will not look for upgrades until its source agreements are accepted."
+_AGREEMENTS_NEEDED = N_("Winget will not look for upgrades until its source agreements are accepted.")
 _BARS_HEIGHT = 2
 _FILTER_HEIGHT = 3
 _ROWS_BEFORE_LOG = 10
 _LOG_LINES = 200
+_BUTTON_EDGES = 2  # the space each side of a button's label
 
 
 def run_is_active(view: RunView) -> bool:
@@ -38,14 +41,14 @@ def run_is_active(view: RunView) -> bool:
 
 class PackagesScreen(DeckScreen):
     BINDINGS = [
-        Binding("f5", "refresh_list", "Refresh"),
-        Binding("r", "refresh_list", "Refresh", show=False),
-        Binding("slash", "filter", "Filter"),
-        Binding("a", "select_all", "All"),
-        Binding("n", "select_none", "None"),
-        Binding("u", "upgrade", "Upgrade"),
-        Binding("d", "details", "Details"),
-        Binding("escape", "back", "Back"),
+        Binding("f5", "refresh_list", N_("Refresh")),
+        Binding("r", "refresh_list", N_("Refresh"), show=False),
+        Binding("slash", "filter", N_("Filter")),
+        Binding("a", "select_all", N_("All")),
+        Binding("n", "select_none", N_("None")),
+        Binding("u", "upgrade", N_("Upgrade")),
+        Binding("d", "details", N_("Details")),
+        Binding("escape", "back", N_("Back")),
     ]
 
     def __init__(self, source: str | None) -> None:
@@ -63,19 +66,20 @@ class PackagesScreen(DeckScreen):
         ascii_mode = self.app.ascii_mode
         yield TitleBar()
         with Vertical(id="packages-body"):
-            yield Input(placeholder="Type to filter, Esc to clear", id="filter")
+            yield Input(placeholder=t("Type to filter, Esc to clear"), id="filter")
             yield PackageTable(ascii_mode=ascii_mode, id="table")
             yield Static("", id="empty", markup=False)
             with Horizontal(id="table-actions"):
-                yield Button("Refresh" if ascii_mode else "↻ Refresh", id="refresh", classes="blue")
-                yield Button("All", id="select-all", classes="gray")
-                yield Button("None", id="select-none", classes="gray")
-                yield Button("Major", id="select-major", classes="gray small-hide")
-                yield Button("Minor", id="select-minor", classes="gray small-hide")
-                yield Button("Patch", id="select-patch", classes="gray small-hide")
+                refresh = t("Refresh")
+                yield Button(refresh if ascii_mode else f"↻ {refresh}", id="refresh", classes="blue")
+                yield Button(t("All"), id="select-all", classes="gray")
+                yield Button(t("None"), id="select-none", classes="gray")
+                yield Button(t("Major"), id="select-major", classes="gray small-hide")
+                yield Button(t("Minor"), id="select-minor", classes="gray small-hide")
+                yield Button(t("Patch"), id="select-patch", classes="gray small-hide")
                 yield Static("", id="actions-gap")
-                yield Button("To run", id="to-run", classes="gray")
-                yield Button("UPGRADE", id="upgrade", disabled=True)
+                yield Button(t("To run"), id="to-run", classes="gray")
+                yield Button(t("UPGRADE"), id="upgrade", disabled=True)
             with VerticalScroll(id="table-log-box"):
                 yield Static("", id="table-log")
         # This screen has the most keys. Ctrl+P still works, and leaving it out here keeps them all on one line.
@@ -93,6 +97,9 @@ class PackagesScreen(DeckScreen):
         self.on_run_view(self.app.runner.view)
         self.query_one(PackageTable).focus()
         self.scan_packages(update_sources=False)
+
+    def fresh(self) -> DeckScreen:
+        return PackagesScreen(self.source)
 
     def on_unmount(self) -> None:
         self.app.remove_run_listener(self.on_run_view)
@@ -121,20 +128,20 @@ class PackagesScreen(DeckScreen):
         refresh.disabled = True
         try:
             if update_sources:
-                self._say("dot", "Updating sources…")
+                self._say("dot", t("Updating sources…"))
                 try:
                     await app.backend.update_sources()
-                    self._say("tree", "sources updated")
+                    self._say("tree", t("sources updated"))
                 except Exception as e:  # a stale list is still worth showing
                     app.log_file.warn("Source update failed", error=repr(e))
-                    self._say("warn", f"Could not update sources, the list may be out of date: {e}")
-            self._say("dot", "Checking for upgrades…")
+                    self._say("warn", t("Could not update sources, the list may be out of date: {error}", error=e))
+            self._say("dot", t("Checking for upgrades…"))
             table = self.query_one(PackageTable)
             try:
                 result = await app.backend.scan(self.source, include_pinned=table.include_pinned)
             except Exception as e:  # shown in the panel, the current rows stay
                 app.log_file.error("Scan failed", error=repr(e))
-                self._say("bad", f"Could not check for upgrades: {e}")
+                self._say("bad", t("Could not check for upgrades: {error}", error=e))
                 if isinstance(e, WingetError) and e.code == SOURCE_AGREEMENTS_NOT_ACCEPTED:
                     self._ask_agreements()
                 return
@@ -152,7 +159,7 @@ class PackagesScreen(DeckScreen):
             if consent:
                 self.scan_packages(update_sources=False)
             else:
-                self._say("warn", "Winget's source agreements are not accepted. You can change this in Settings.")
+                self._say("warn", t("Winget's source agreements are not accepted. You can change this in Settings."))
 
         self.app.ask_agreements(answered, _AGREEMENTS_NEEDED)
 
@@ -178,15 +185,15 @@ class PackagesScreen(DeckScreen):
             gone=sorted(merged.gone_ids),
             ignored=hidden,
         )
-        self._say("tree", f"{len(merged.rows)} upgrade(s) available")
+        self._say("tree", t("{count} upgrade(s) available", count=len(merged.rows)))
         if merged.new_ids:
-            self._say("tree", f"{len(merged.new_ids)} new since the last check")
+            self._say("tree", t("{count} new since the last check", count=len(merged.new_ids)))
         if merged.gone_ids:
-            self._say("tree", f"{len(merged.gone_ids)} no longer need upgrading")
+            self._say("tree", t("{count} no longer need upgrading", count=len(merged.gone_ids)))
         if hidden:
-            self._say("tree", f"{hidden} ignored package(s) hidden")
+            self._say("tree", t("{count} ignored package(s) hidden", count=hidden))
         if result.unknown_hidden:
-            self._say("tree", f"{result.unknown_hidden} package(s) with an unknown version hidden by winget")
+            self._say("tree", t("{count} package(s) with an unknown version hidden by winget", count=result.unknown_hidden))
         self._show_rows_or_message()
         self.fit_table()
 
@@ -197,7 +204,7 @@ class PackagesScreen(DeckScreen):
         table.display = not nothing
         empty.display = nothing
         if nothing:
-            empty.update("Everything is up to date. Press Refresh to check again.")
+            empty.update(t("Everything is up to date. Press Refresh to check again."))
 
     def fit_table(self) -> None:
         """Rows take what they need and the log gets the rest. The log goes before the table shrinks."""
@@ -214,6 +221,23 @@ class PackagesScreen(DeckScreen):
 
     def on_resize(self) -> None:
         self.fit_table()
+        self.fit_actions()
+
+    def fit_actions(self) -> None:
+        """Major, Minor and Patch are shortcuts, so they make room first when the row cannot hold every button."""
+        row = self.query_one("#table-actions")
+        if not row.size.width:
+            return
+        shortcuts = list(row.query(".small-hide").results(Button))
+        needed = 0
+        for button in row.query(Button).results(Button):
+            if button.id == "to-run" and not button.display:
+                continue
+            label = cell_len(str(button.label)) + _BUTTON_EDGES
+            needed += max(label, button.styles.min_width.value if button.styles.min_width else 0)
+            needed += button.styles.margin.right
+        for button in shortcuts:
+            button.set_class(needed > row.size.width, "-no-room")
 
     def auto_check(self) -> None:
         if self._scanning or run_is_active(self.app.runner.view):
@@ -227,7 +251,7 @@ class PackagesScreen(DeckScreen):
         refresh = found.first(Button)
         blocked = run_is_active(self.app.runner.view)
         refresh.disabled = blocked or self._scanning
-        refresh.tooltip = _REFRESH_BLOCKED if blocked else "Update winget's sources, then check again"
+        refresh.tooltip = t(_REFRESH_BLOCKED) if blocked else t("Update winget's sources, then check again")
 
     def on_run_view(self, view: RunView) -> None:
         if not self.query("#to-run"):
@@ -235,6 +259,7 @@ class PackagesScreen(DeckScreen):
         self._update_refresh()
         unfinished = view.state in (RunState.RUNNING, RunState.PAUSED)
         self.query_one("#to-run", Button).display = unfinished
+        self.fit_actions()
         if unfinished:
             self._run_was_active = True
         elif self._run_was_active and view.state is RunState.FINISHED:
@@ -247,8 +272,10 @@ class PackagesScreen(DeckScreen):
     def _ticks_changed(self) -> None:
         count = len(self.query_one(PackageTable).ticked)
         upgrade = self.query_one("#upgrade", Button)
-        upgrade.label = f"UPGRADE ({count})" if count else "UPGRADE"
+        upgrade.label = f"{t('UPGRADE')} ({count})" if count else t("UPGRADE")
         upgrade.disabled = not count
+        upgrade.refresh(layout=True)  # a longer label needs a wider button
+        self.fit_actions()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         table = self.query_one(PackageTable)

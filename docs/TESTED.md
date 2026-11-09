@@ -1,6 +1,6 @@
 # What has been tested, on what
 
-Version 1.0.3, 9 November 2026. "Supported" in the design means the app targets a system. This page says what has
+Version 1.0.4, 9 November 2026. "Supported" in the design means the app targets a system. This page says what has
 actually been run.
 
 ## The test machines
@@ -10,8 +10,8 @@ build, so it proves nothing about other Windows versions.
 
 **Second PC:** Windows 10 (build 19045), x64, fr-FR, classic console with Consolas, winget v1.29.380. Version 1.0.0 was
 opened there, which is how the problems fixed in 1.0.1 were found. Version 1.0.1 then did real upgrades there, which found
-the problems fixed in 1.0.2. Version 1.0.2 confirmed those fixes there and turned up the one fixed in 1.0.3. Version
-1.0.3 has not been run there yet.
+the problems fixed in 1.0.2. Version 1.0.2 confirmed those fixes there and turned up the one fixed in 1.0.3. Versions
+1.0.3 and 1.0.4 have not been run there yet, so the French screens have not been seen on a French Windows.
 
 ## Not yet done
 
@@ -43,9 +43,21 @@ and Stop between packages have (see "Real upgrades on the second PC" below).
 
 ### Automated suite
 
-`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 665 passed at v1.0.3. A test
+`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 724 passed at v1.0.4. A test
 marked `real` reads the real winget (passed) and one marked `real_download` downloads a package; both run only on
 request, and `real_download` was not rerun on the final code.
+
+### Languages
+
+| What | Result |
+|---|---|
+| Every text the app shows has a French version with the same placeholders | Checked by a test that reads the code |
+| Every screen in French at the seven window sizes, with no button outside the window | Pass |
+| Switching in Settings: the page redraws at once, unsaved changes on it stay, screens underneath come back in French | Pass |
+| A run in progress when the language changes | Keeps going; its screen changes once the run is over |
+| French with `--ascii` | Accents become plain letters, and every column stays in place |
+| French screens by eye | Demo pictures at 80 and 100 columns, on the main machine only |
+| Arabic in the classic console | Tried and not offered: words come out reversed, with no right-to-left support |
 
 ### Measured with real winget
 
@@ -60,8 +72,8 @@ See `docs/spikes/2026-11-09-sandbox-results.md`. These tested winget itself, bef
 
 ### The built exes
 
-Each was run on the owner's PC, in a pseudo console with no window on the desktop. Version 1.0.3 builds:
-`dist\2026-11-09\WingetDeck-1.0.3-x64.exe` and `dist\2026-11-09\WingetDeck-1.0.3-x86.exe`. Both also passed
+Each was run on the owner's PC, in a pseudo console with no window on the desktop. Version 1.0.4 builds:
+`dist\2026-11-09\WingetDeck-1.0.4-x64.exe` and `dist\2026-11-09\WingetDeck-1.0.4-x86.exe`. Both also passed
 `scripts/resize_check.py` in a classic console.
 
 | Check | x64 | x86 |

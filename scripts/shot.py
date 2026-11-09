@@ -3,7 +3,7 @@
 Usage: python scripts/shot.py OUTPUT.svg [WIDTH HEIGHT] [KEYS...]
 
 Set WINGETDECK_SHOT_REAL=1 to read this PC's real winget instead of the demo list. Keep the keys to
-looking around: this drives the real app.
+looking around: this drives the real app. Set WINGETDECK_SHOT_LANGUAGE=fr for the French screens.
 """
 
 import asyncio
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from wingetdeck.core.logs import SessionLog
 from wingetdeck.core.runner import Runner
-from wingetdeck.core.store import Store
+from wingetdeck.core.store import Settings, Store
 from wingetdeck.paths import resolve_data_dir
 from wingetdeck.ui.app import WingetDeckApp
 from wingetdeck.winget.fake import FakeBackend, demo_packages
@@ -29,6 +29,7 @@ async def main() -> None:
         data = resolve_data_dir(Path(folder) / "a", Path(folder) / "b")
         log = SessionLog(data, False, {})
         store = Store(data, log)
+        store.save_settings(Settings(language=os.environ.get("WINGETDECK_SHOT_LANGUAGE", "")))
         real = os.environ.get("WINGETDECK_SHOT_REAL") == "1"
         backend = RealBackend(log) if real else FakeBackend(demo_packages(), speed=4)
         runner = Runner(backend, store, log, lambda view: None)
