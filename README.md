@@ -1,14 +1,74 @@
-# WingetDeck
+<p align="center">
+  <img src="site/logo.svg" alt="" width="72" height="72">
+</p>
 
-Upgrade your Windows apps through winget, in a clickable terminal app: tick what you want, press **UPGRADE**, and
-pause, stop or resume while it runs. It is one portable exe with no installer, no admin rights and no Python needed.
+<h1 align="center">WingetDeck</h1>
 
-The look takes its inspiration from [wifit3](https://github.com/derv82/wifit3). The code and art here are our own.
+<p align="center">
+  Upgrade your Windows apps through winget, in a window you can click.<br>
+  Tick what you want, press <b>UPGRADE</b>, then pause, stop or resume while it runs.
+</p>
+
+<p align="center">
+  <a href="https://github.com/arbarak/WingetDeck/releases/latest"><b>Download</b></a> &nbsp;|&nbsp;
+  <a href="https://arbarak.github.io/WingetDeck/"><b>Details page</b></a> &nbsp;|&nbsp;
+  <a href="https://github.dev/arbarak/WingetDeck">Read the code in your browser</a> &nbsp;|&nbsp;
+  <a href="docs/TESTED.md">What has been tested</a>
+</p>
+
+![WingetDeck downloading Git at 45 percent, with Pause and Stop buttons, a log and a queue](docs/images/downloading.png)
+
+> [!WARNING]
+> **This is the first release.** It has read real upgrade lists from real winget, but the finished app has not yet
+> carried out a real upgrade. Try `WingetDeck-x64.exe --demo` first, which installs nothing.
+> [docs/TESTED.md](docs/TESTED.md) lists exactly what was and was not checked.
+
+## What it does
+
+- **Shows every available upgrade** in a table, with the size of each change: major, minor or patch.
+- **Upgrades only what you tick**, one package at a time, with live speed, percent and log.
+- **Tells the truth about Pause and Stop.** The buttons change with what winget is doing at that moment.
+- **Lets you change your mind mid-run:** reorder the queue, or take a package out of it.
+- **Picks up where it stopped.** If the app closes, crashes or the PC restarts, it offers to continue the queue.
+- **Keeps a record:** a list of your installed versions before each run, a history, and full logs.
+- **Fits your window,** from a small terminal to full screen, and works with the mouse or the keyboard.
+- **Is one portable exe,** with no installer, no admin rights and no Python needed.
+
+## Screenshots
+
+These all come from demo mode, so the packages, versions and speeds are pretend.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/start.png" alt="Start screen with a source list and a START button"></td>
+    <td width="50%"><img src="docs/images/packages.png" alt="Table of available upgrades with tick boxes and an UPGRADE button"></td>
+  </tr>
+  <tr>
+    <td><b>Start.</b> Choose a source and press START.</td>
+    <td><b>Packages.</b> Tick by clicking, or by size of change with Major, Minor and Patch.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/paused.png" alt="A run paused at 30 percent, with Resume and Stop buttons"></td>
+    <td><img src="docs/images/details.png" alt="Details of 7-Zip, with Pin, Ignore and Options buttons"></td>
+  </tr>
+  <tr>
+    <td><b>Paused.</b> Pause becomes Resume, and the queue stays as it was.</td>
+    <td><b>Details.</b> See a package's versions and notes, then pin it, ignore it or set options.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/settings.png" alt="Settings screen with upgrade options"></td>
+    <td><img src="docs/images/logs.png" alt="Logs screen with level filters and a Save diagnostic report button"></td>
+  </tr>
+  <tr>
+    <td><b>Settings.</b> Options for every package, and how the app behaves.</td>
+    <td><b>Logs.</b> Filter by level or package, and save a report for bug reports.</td>
+  </tr>
+</table>
 
 ## Run it
 
-Copy `WingetDeck-x64.exe` anywhere and double-click it. Winget itself must be on the PC: if it is not, or is older
-than 1.4, the app says how to get it.
+Copy `WingetDeck-x64.exe` anywhere and double-click it. You need Windows 10 version 1809 or newer, and winget 1.4 or
+newer. If winget is missing or too old, the app says how to get it.
 
 ```
 WingetDeck-x64.exe            the real thing
@@ -22,7 +82,8 @@ WingetDeck-x64.exe --version  print the version
 percent or speed, only an animation and the elapsed time. There is no ARM64 exe in this release.
 
 **The SmartScreen warning:** the exe is not signed, so Windows may say it is from an unknown publisher. Choose
-**More info**, then **Run anyway**, if you trust where the file came from.
+**More info**, then **Run anyway**, if you trust where the file came from. Each release lists SHA-256 checksums, and
+[SECURITY.md](SECURITY.md) shows how to check them.
 
 ## Using it
 
@@ -62,15 +123,16 @@ Settings, the saved queue, snapshots and logs go in `WingetDeck-data` beside the
 to, or the app is running as administrator, they go in `%LOCALAPPDATA%\WingetDeck` instead, and the start screen shows
 which is in use. `--demo` keeps its data in a separate `demo` subfolder. Nothing is ever deleted automatically.
 
+The app has no network code of its own: all downloads are winget's, and it sends no data anywhere.
+
 ## When something goes wrong
 
 Press `l` for the Logs screen, which also has **Open logs folder** and **Save diagnostic report**: a dated zip for bug
-reports, with your user name and any secrets removed. Every run writes a timeline, and each package keeps winget's
+reports, with your user name and the secrets it recognises removed. A custom installer argument containing spaces can
+slip through, so read the report before you share it. Every run writes a timeline, and each package keeps winget's
 full output. If the app itself crashes, it restores the terminal and shows the path of a crash log.
 
-## What has been tested
-
-See [docs/TESTED.md](docs/TESTED.md), which lists exactly what was checked on what, including what was not.
+To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## Building
 
@@ -98,3 +160,11 @@ Checks for a built exe, none of which open a window or upgrade anything:
 .venv\Scripts\python scripts\portable_check.py path\to.exe WORK_DIR   # odd paths, no Python, read-only folder
 .venv\Scripts\python scripts\real_scan_check.py path\to.exe           # reads real winget; never presses Upgrade
 ```
+
+The design is written up in [docs/design.md](docs/design.md).
+
+## Credits
+
+The look takes its inspiration from [wifit3](https://github.com/derv82/wifit3). The code and art here are original.
+Built with [Python](https://www.python.org/), [Textual](https://github.com/Textualize/textual),
+[pywinpty](https://github.com/andfoy/pywinpty) and [PyInstaller](https://pyinstaller.org/).

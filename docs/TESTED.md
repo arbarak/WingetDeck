@@ -78,3 +78,5 @@ Upgrade was never pressed in any of these.
 - x86 has no live numbers, only an animation and the elapsed time.
 - The exe is not signed, so SmartScreen may warn.
 - Ending the app from Task Manager while a download is frozen cannot unfreeze winget.
+- A custom installer argument containing spaces can slip past the diagnostic report's secret removal. Read a report
+  before sharing it.
