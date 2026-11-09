@@ -693,3 +693,30 @@ DetailsScreen {
     margin-left: 1;
     width: auto;
 }
+
+/* History */
+
+#history-note {
+    width: 100%;
+    height: auto;
+    padding: 0 1;
+    color: $warning;
+}
+
+#history-list {
+    height: 1fr;
+    background: $background;
+    border: solid $wd-gray;
+    margin: 0 1;
+}
+
+#history-buttons {
+    width: 100%;
+    height: 3;
+    padding: 0 1;
+}
+
+#history-buttons Button {
+    width: auto;
+    margin-right: 1;
+}

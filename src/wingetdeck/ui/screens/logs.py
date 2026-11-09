@@ -44,9 +44,10 @@ class TranscriptScreen(Screen):
 
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
 
-    def __init__(self, package_id: str) -> None:
+    def __init__(self, package_id: str, path: Path | None = None) -> None:
         super().__init__()
         self.package_id = package_id
+        self.path = path
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True, icon="○")
@@ -56,7 +57,7 @@ class TranscriptScreen(Screen):
 
     def on_mount(self) -> None:
         log = self.query_one(RichLog)
-        path = self.app.log_file.transcript_for(self.package_id)
+        path = self.path or self.app.log_file.transcript_for(self.package_id)
         if path is None:
             log.write("There is no winget output for this package in this session.")
             return

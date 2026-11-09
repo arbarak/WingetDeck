@@ -36,6 +36,7 @@ async def until(check, seconds=8.0):
 
 async def begin(app, pilot, ids=("A", "B"), stage=None):
     await pilot.pause()
+    app.store.save_settings(replace(app.store.load_settings(), asked_agreements=True))
     app.start_upgrade([pkg(i) for i in ids])
     await until(lambda: isinstance(app.screen, ProgressScreen))
     if stage is not None:

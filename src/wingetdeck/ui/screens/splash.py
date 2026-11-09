@@ -94,6 +94,7 @@ class SplashScreen(Screen):
         listing.index = 0
         listing.focus()
         self.query_one("#start", Button).disabled = False
+        app.offer_resume()
 
     def action_start(self) -> None:
         if self.query_one("#start", Button).disabled:

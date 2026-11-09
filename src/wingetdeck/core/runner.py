@@ -75,6 +75,7 @@ class Runner:
         self._clock = clock
         self._queue: RunQueue | None = None
         self._options_for: Callable[[Package], UpgradeOptions] | None = None
+        self._starter: Callable[[Package, UpgradeOptions], UpgradeHandle] = backend.start_upgrade
         self._handle: UpgradeHandle | None = None
         self._driver: asyncio.Task | None = None
         self._ticker: asyncio.Task | None = None
@@ -154,12 +155,19 @@ class Runner:
 
     # Starting and driving
 
-    async def start(self, packages: list[Package], options_for: Callable[[Package], UpgradeOptions]) -> None:
+    async def start(
+        self,
+        packages: list[Package],
+        options_for: Callable[[Package], UpgradeOptions],
+        starter: Callable[[Package, UpgradeOptions], UpgradeHandle] | None = None,
+    ) -> None:
+        """`starter` runs something other than an upgrade for each package, such as a roll back."""
         if self._driver is not None and not self._driver.done():
             raise RuntimeError("A run is already in progress")
         caps = self._backend.capabilities()
         self._queue = RunQueue(packages, direct_downloader=bool(caps and caps.direct_downloader))
         self._options_for = options_for
+        self._starter = starter or self._backend.start_upgrade
         self._started_at = self._clock()
         self._finished_at = None
         self._last_error = None
@@ -234,7 +242,7 @@ class Runner:
 
     async def _one_attempt(self, item: RunItem) -> int:
         try:
-            self._handle = self._backend.start_upgrade(item.package, self._options_for(item.package))
+            self._handle = self._starter(item.package, self._options_for(item.package))
         except OSError as e:
             self._log.error("Could not start winget", package=item.package.id, error=repr(e))
             item.message = f"Could not start winget: {e}"

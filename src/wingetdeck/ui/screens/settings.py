@@ -11,6 +11,9 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Checkbox, Footer, Header, Input, Label, Select, Static
 
+from ...core.queue import RunState
+from ...core.safety import restart_as_admin
+from ...paths import is_elevated
 from ...winget.settings_file import DownloaderChange
 from ..themes import THEMES
 from ..widgets.options_form import OptionsForm
@@ -48,6 +51,13 @@ class SettingsScreen(Screen):
             yield Static("Winget's direct downloader", classes="form-title")
             yield Static("", id="direct-status", markup=False)
             yield Button("Undo the direct downloader change", id="undo-direct", classes="gray")
+            yield Static("Administrator", classes="form-title")
+            yield Static(
+                "Without administrator rights each installer may ask for permission itself. "
+                "An administrator copy uses your profile folder for its data, not the folder beside the exe.",
+                markup=False,
+            )
+            yield Button("Restart as administrator", id="restart-admin", classes="gray")
             yield Static("Ignored packages", classes="form-title")
             yield Static("", id="ignored-list", markup=False)
             yield Button("Show ignored packages again", id="clear-ignored", classes="gray")
@@ -63,6 +73,11 @@ class SettingsScreen(Screen):
         self._show_direct()
         self._show_ignored()
         self._show_size()
+        button = self.query_one("#restart-admin", Button)
+        button.display = not is_elevated()
+        button.disabled = self.app.runner.view.state in (RunState.RUNNING, RunState.PAUSED)
+        if button.disabled:
+            button.tooltip = "Not available during an upgrade run."
 
     def _note(self, text: str) -> None:
         self.query_one("#settings-note", Static).update(text)
@@ -137,6 +152,15 @@ class SettingsScreen(Screen):
                 self._clear_ignored()
             case "cleanup":
                 self._ask_cleanup()
+            case "restart-admin":
+                self._restart()
+
+    def _restart(self) -> None:
+        if restart_as_admin():
+            self.app.log_file.info("Restarting as administrator")
+            self.app.exit()
+        else:
+            self._note("Windows did not restart the app as administrator, so this copy stays open.")
 
     def _undo_direct(self) -> None:
         app = self.app

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -12,12 +13,15 @@ from textual.screen import ModalScreen
 
 from .. import __version__
 from ..core.logs import SessionLog
-from ..core.queue import ItemState
+from ..core.queue import ItemState, RunQueue
 from ..core.runner import Runner, RunView
-from ..core.store import Store
+from ..core.safety import SnapshotFailed, create_restore_point, take_snapshot
+from ..core.store import HistoryEntry, Store
+from ..paths import is_elevated
 from ..winget.backend import UpgradeOptions, WingetBackend
-from ..winget.models import Package
+from ..winget.models import ChangeKind, Package
 from .screens.dialogs import ConfirmDialog
+from .screens.history import HistoryScreen
 from .screens.logs import LogsScreen
 from .screens.no_winget import NoWingetScreen
 from .screens.packages import PackagesScreen
@@ -37,6 +41,9 @@ _CONSENT = (
 )
 _AGREE = "Accept agreements"
 _NO_AGREE = "Skip those packages"
+_GO_ON = "Go on without it"
+_RESUME = "Resume"
+_DISCARD = "Don't resume"
 
 
 class WingetDeckApp(App):
@@ -45,6 +52,7 @@ class WingetDeckApp(App):
     BINDINGS = [
         Binding("l", "show_logs", "Logs"),
         Binding("t", "show_settings", "Settings"),
+        Binding("h", "show_history", "History"),
     ]
 
     def __init__(
@@ -61,6 +69,7 @@ class WingetDeckApp(App):
         self.runner = runner
         self.ascii_mode = ascii_mode
         self._run_listeners: list[Callable[[RunView], None]] = []
+        self._resume_offered = False
         super().__init__()
         runner.on_change = self._run_changed
         self.sub_title = f"v{__version__}"
@@ -116,9 +125,11 @@ class WingetDeckApp(App):
         chosen = settings.per_package.get(package.id, settings.defaults)
         return replace(chosen, accept_agreements=settings.consented_agreements)
 
-    async def _begin_run(self, packages: list[Package]) -> None:
+    async def _begin_run(self, packages: list[Package], starter=None) -> None:
+        if not await self._safety_steps():
+            return
         try:
-            await self.runner.start(packages, self.options_for)
+            await self.runner.start(packages, self.options_for, starter)
         except RuntimeError as e:
             self.log_file.warn("Run not started", error=str(e))
             self.notify(str(e), severity="warning")
@@ -127,6 +138,66 @@ class WingetDeckApp(App):
         if screen.is_mounted:
             screen.new_run()
         self.show_progress()
+
+    async def _safety_steps(self) -> bool:
+        """False means the user chose not to go on."""
+        try:
+            path = await take_snapshot(self.backend, self.log_file.data_dir)
+            self.log_file.info("Snapshot saved", path=str(path))
+        except SnapshotFailed as e:
+            self.log_file.warn("Snapshot failed", error=str(e))
+            dialog = ConfirmDialog(
+                "Could not save the list of installed apps",
+                f"Before each run a list of installed versions is saved, so there is a record of how "
+                f"things were. This time it failed: {e}\n\nGo on without it?",
+                (_GO_ON,),
+            )
+            if await self.push_screen_wait(dialog) != _GO_ON:
+                return False
+        settings = self.store.load_settings()
+        if settings.create_restore_point and is_elevated():
+            result = await asyncio.to_thread(create_restore_point, "Before WingetDeck run")
+            if result.ok:
+                self.log_file.info("Restore point created")
+            else:
+                self.log_file.warn("No restore point", reason=result.message)
+                self.notify(result.message, severity="warning")
+        return True
+
+    def offer_resume(self) -> None:
+        snapshot = self.store.load_queue()
+        if snapshot is None or not snapshot.items or self._resume_offered:
+            return
+        self._resume_offered = True
+        names = ", ".join(i.name for i in snapshot.items[:5])
+        count = len(snapshot.items)
+
+        def answered(choice: str | None) -> None:
+            if choice == _RESUME:
+                self.log_file.info("Queue resumed", count=count)
+                packages = RunQueue.restore(snapshot).items
+                self.start_upgrade([item.package for item in packages])
+            elif choice == _DISCARD:
+                self.store.clear_queue(keep_copy=True)
+                self.log_file.info("Queue declined, a copy was kept", count=count)
+
+        text = (
+            f"The last run did not finish: {names}{'…' if count > 5 else ''}.\n\n"
+            "An interrupted download starts again from the beginning."
+        )
+        self.push_screen(
+            ConfirmDialog(f"Resume unfinished queue ({count} left)?", text, (_RESUME, _DISCARD), cancel_label="Ask me later"),
+            answered,
+        )
+
+    def start_rollback(self, entry: HistoryEntry, version: str) -> None:
+        self.log_file.warn("Roll back requested", package=entry.id, version=version)
+        package = Package(entry.name, entry.id, entry.to_version, version, None, ChangeKind.UNKNOWN)
+
+        def starter(chosen: Package, options: UpgradeOptions):
+            return self.backend.start_install_version(chosen.id, version, options)
+
+        self.run_worker(self._begin_run([package], starter), group="run-start", exclusive=True)
 
     def progress_screen(self) -> ProgressScreen:
         if not self.is_screen_installed("progress"):
@@ -160,6 +231,10 @@ class WingetDeckApp(App):
     def action_show_settings(self) -> None:
         if not self._on_top(SettingsScreen):
             self.push_screen(SettingsScreen())
+
+    def action_show_history(self) -> None:
+        if not self._on_top(HistoryScreen):
+            self.push_screen(HistoryScreen())
 
     async def action_quit(self) -> None:
         await self.runner.shutdown()
