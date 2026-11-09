@@ -1,6 +1,6 @@
 # What has been tested, on what
 
-Version 1.0.2, 9 November 2026. "Supported" in the design means the app targets a system. This page says what has
+Version 1.0.3, 9 November 2026. "Supported" in the design means the app targets a system. This page says what has
 actually been run.
 
 ## The test machines
@@ -10,7 +10,8 @@ build, so it proves nothing about other Windows versions.
 
 **Second PC:** Windows 10 (build 19045), x64, fr-FR, classic console with Consolas, winget v1.29.380. Version 1.0.0 was
 opened there, which is how the problems fixed in 1.0.1 were found. Version 1.0.1 then did real upgrades there, which found
-the problems fixed in 1.0.2. Version 1.0.2 has not been run there yet.
+the problems fixed in 1.0.2. Version 1.0.2 confirmed those fixes there and turned up the one fixed in 1.0.3. Version
+1.0.3 has not been run there yet.
 
 ## Not yet done
 
@@ -42,7 +43,7 @@ and Stop between packages have (see "Real upgrades on the second PC" below).
 
 ### Automated suite
 
-`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 653 passed at v1.0.2. A test
+`.venv\Scripts\python -m pytest` on the owner's PC, using a pretend winget unless noted: 665 passed at v1.0.3. A test
 marked `real` reads the real winget (passed) and one marked `real_download` downloads a package; both run only on
 request, and `real_download` was not rerun on the final code.
 
@@ -59,8 +60,9 @@ See `docs/spikes/2026-11-09-sandbox-results.md`. These tested winget itself, bef
 
 ### The built exes
 
-Each was run on the owner's PC, in a pseudo console with no window on the desktop. Version 1.0.1 builds:
-`dist\2026-11-09\162720\WingetDeck-x64.exe` and `dist\2026-11-09\162808\WingetDeck-x86.exe`.
+Each was run on the owner's PC, in a pseudo console with no window on the desktop. Version 1.0.3 builds:
+`dist\2026-11-09\WingetDeck-1.0.3-x64.exe` and `dist\2026-11-09\WingetDeck-1.0.3-x86.exe`. Both also passed
+`scripts/resize_check.py` in a classic console.
 
 | Check | x64 | x86 |
 |---|---|---|
@@ -112,6 +114,22 @@ It found three faults, all fixed in 1.0.2: Refresh sources failing after the agr
 in French, and a second press of Upgrade while the first was saving its list. The first fix was then run against real winget
 on the main machine, and the second replays a real French transcript from that PC. Not used there: Resume, Stop now, Force
 stop, a Pause in the middle of a download, and the details page.
+
+Then version 1.0.2, on the same PC, from its logs and one screenshot:
+
+| What was done | What happened |
+|---|---|
+| Refresh sources, 4 times, after the agreements were accepted | Worked every time. In 1.0.1 it failed every time |
+| Node.js, Python 3.13 and pgAdmin upgraded | All reported Upgraded, left the list, and the saved lists show the new versions |
+| OBS Studio, while it was open | Failed as in use, logged as a warning. It was then updated outside the app, to 33.0.1, and left the list on the next scan |
+| Choosing the Microsoft Store source, then winget | Scanned each on its own: none from the Store, 6 from winget |
+| Pressing Upgrade 4 times, once per run | One saved list each time, so no double start |
+| Resizing the window | **A strip down the right edge kept old colours.** Fixed in 1.0.3, below |
+
+The strip: the classic console keeps room for its vertical scrollbar, which the app hides, and never draws there.
+`scripts/resize_check.py` on the main machine opened the demo in a classic console, resized it in steps, maximised, restored and
+shrank it, and read the console's own size each time. With 1.0.2 the text area was 2 or 3 columns narrower than the
+window at every size. With 1.0.3 it filled the window at every size, and a picture shows the app drawing to the edge.
 
 ### The classic Windows console
 

@@ -24,9 +24,12 @@ if (-not (Test-Path "assets\wingetdeck.ico")) {
     if ($LASTEXITCODE) { throw "The icon could not be made." }
 }
 
+$version = (& $python -c "import sys; sys.path.insert(0, 'src'); import wingetdeck; print(wingetdeck.__version__)").Trim()
+if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Could not read the version: $version" }
+
 $date = Get-Date -Format "yyyy-MM-dd"
 $folder = "dist\$date"
-$name = "WingetDeck-$Arch"
+$name = "WingetDeck-$version-$Arch"  # what people download, so it says which version and which processor
 if (Test-Path "$folder\$name.exe") {
     $folder = "dist\$date\" + (Get-Date -Format "HHmmss")
 }

@@ -20,8 +20,8 @@
 ![WingetDeck downloading Git at 45 percent, with Pause and Stop buttons, a log and a queue](docs/images/downloading.png)
 
 > [!WARNING]
-> **This is an early release.** The finished app has completed one real upgrade, but Pause and Stop have not yet been
-> used during a real upgrade. Try `WingetDeck-x64.exe --demo` first, which installs nothing.
+> **This is an early release.** It has done real upgrades on two PCs, with Pause and Stop between packages, but Stop
+> now, Resume and a Pause in the middle of a download have not been used in a real upgrade yet. Try `WingetDeck-1.0.3-x64.exe --demo` first, which installs nothing.
 > [docs/TESTED.md](docs/TESTED.md) lists exactly what was and was not checked.
 
 ## What it does
@@ -68,19 +68,20 @@ These all come from demo mode, so the packages, versions and speeds are pretend.
 
 ## Run it
 
-Copy `WingetDeck-x64.exe` anywhere and double-click it. You need Windows 10 version 1809 or newer, and winget 1.4 or
+Copy `WingetDeck-1.0.3-x64.exe` anywhere and double-click it. You need Windows 10 version 1809 or newer, and winget 1.4 or
 newer. If winget is missing or too old, the app can sort that out for you: see [No winget?](#no-winget)
 
 ```
-WingetDeck-x64.exe            the real thing
-WingetDeck-x64.exe --demo     try everything with a pretend winget; nothing is installed
-WingetDeck-x64.exe --basic    reduced symbols, if your console shows empty boxes
-WingetDeck-x64.exe --ascii    plain characters only, the last resort for an old console
-WingetDeck-x64.exe --debug    also log every line winget prints
-WingetDeck-x64.exe --version  print the version
+WingetDeck-1.0.3-x64.exe            the real thing
+WingetDeck-1.0.3-x64.exe --demo     try everything with a pretend winget; nothing is installed
+WingetDeck-1.0.3-x64.exe --basic    reduced symbols, if your console shows empty boxes
+WingetDeck-1.0.3-x64.exe --ascii    plain characters only, the last resort for an old console
+WingetDeck-1.0.3-x64.exe --debug    also log every line winget prints
+WingetDeck-1.0.3-x64.exe --version  print the version
 ```
 
-**Which exe:** `WingetDeck-x64.exe` for nearly every PC. `WingetDeck-x86.exe` is for 32-bit Windows and has no live
+**Which exe:** each name says the version and the processor type. `WingetDeck-1.0.3-x64.exe` is for nearly every PC.
+`WingetDeck-1.0.3-x86.exe` is for 32-bit Windows and has no live
 percent or speed, only an animation and the elapsed time. There is no ARM64 exe in this release.
 
 **The SmartScreen warning:** the exe is not signed, so Windows may say it is from an unknown publisher. Choose
@@ -181,6 +182,9 @@ Version 1.0.2 fixes what real upgrades on that PC turned up, with Windows in Fre
 - After accepting the agreements, Refresh sources always failed with "Invalid command line arguments".
 - On Windows in another language, the app could not tell downloading from installing, so Stop offered the wrong choices.
 - Pressing Upgrade showed nothing while the app saved its list of installed apps, so it was easy to press twice.
+
+Version 1.0.3 fixes a strip down the right edge of the classic console that kept old colours after resizing, found by
+running 1.0.2 on the same PC.
 
 [CHANGELOG.md](CHANGELOG.md) has the details for each release.
 

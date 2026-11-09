@@ -62,7 +62,11 @@ def _crash(log: SessionLog, error: BaseException) -> int:
 
 
 def _run(app: WingetDeckApp, log: SessionLog, runner: Runner) -> int:
-    install_close_handler(runner.emergency_stop)
+    def window_closed() -> None:
+        log.info("Window closed")  # Windows ends the process moments later, so say so first
+        runner.emergency_stop()
+
+    install_close_handler(window_closed)
     try:
         with QuickEditGuard():
             app.run()

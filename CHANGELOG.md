@@ -3,6 +3,20 @@
 Found a problem that is not listed here?
 [Report it](https://github.com/arbarak/WingetDeck/issues/new/choose) and it can be fixed in the next release.
 
+## 1.0.3, 9 November 2026
+
+### Changed
+
+- Downloads are named with the version and the processor type, such as `WingetDeck-1.0.3-x64.exe` and
+  `WingetDeck-1.0.3-x86.exe`.
+
+### Fixed
+
+- **A strip down the right edge of the classic console** kept old colours after the window was resized or maximised. The
+  console was keeping room for the scrollbar the app hides, and never drew there. The app now fills the whole window.
+  Found on the Windows 10 PC.
+- The log now records the window being closed with its X button, not only Quit.
+
 ## 1.0.2, 9 November 2026
 
 ### Added

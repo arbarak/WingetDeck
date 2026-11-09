@@ -171,8 +171,76 @@ class _CursorInfo(ctypes.Structure):
     _fields_ = [("dwSize", wintypes.DWORD), ("bVisible", wintypes.BOOL)]
 
 
+class _Coord(ctypes.Structure):
+    _fields_ = [("X", ctypes.c_short), ("Y", ctypes.c_short)]
+
+
+class _SmallRect(ctypes.Structure):
+    _fields_ = [("Left", ctypes.c_short), ("Top", ctypes.c_short), ("Right", ctypes.c_short), ("Bottom", ctypes.c_short)]
+
+
+class _BufferInfo(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.ULONG),
+        ("dwSize", _Coord),
+        ("dwCursorPosition", _Coord),
+        ("wAttributes", wintypes.WORD),
+        ("srWindow", _SmallRect),
+        ("dwMaximumWindowSize", _Coord),
+        ("wPopupAttributes", wintypes.WORD),
+        ("bFullscreenSupported", wintypes.BOOL),
+        ("ColorTable", wintypes.DWORD * 16),
+    ]
+
+
+class _FontInfo(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.ULONG),
+        ("nFont", wintypes.DWORD),
+        ("dwFontSize", _Coord),
+        ("FontFamily", wintypes.UINT),
+        ("FontWeight", wintypes.UINT),
+        ("FaceName", wintypes.WCHAR * 32),
+    ]
+
+
+def filled_size(client: tuple[int, int], font: tuple[int, int], buffer: tuple[int, int]) -> tuple[int, int] | None:
+    """The text area, in characters, that fills a window of `client` pixels, or None to leave it as it is."""
+    if min(font) <= 0:
+        return None
+    columns, rows = client[0] // font[0], client[1] // font[1]
+    if columns < 1 or rows < 1 or (columns, rows) == tuple(buffer):
+        return None
+    return columns, rows
+
+
+def _fill_window(kernel: Any, output: int, window: int) -> None:
+    """The console leaves room for its scrollbar even once it is hidden, and never draws there. Widen the text area
+    into that room. The console then reports the new size, and the app redraws to the edge."""
+    user = ctypes.WinDLL("user32")
+    rect = wintypes.RECT()
+    if not user.GetClientRect(wintypes.HWND(window), ctypes.byref(rect)):
+        return
+    info, font = _BufferInfo(), _FontInfo()
+    info.cbSize, font.cbSize = ctypes.sizeof(_BufferInfo), ctypes.sizeof(_FontInfo)
+    handle = wintypes.HANDLE(output)
+    if not kernel.GetConsoleScreenBufferInfoEx(handle, ctypes.byref(info)):
+        return
+    if not kernel.GetCurrentConsoleFontEx(handle, False, ctypes.byref(font)):
+        return
+    size = filled_size(
+        (rect.right, rect.bottom), (font.dwFontSize.X, font.dwFontSize.Y), (info.dwSize.X, info.dwSize.Y)
+    )
+    if size is None:
+        return
+    info.dwSize = _Coord(*size)
+    info.srWindow = _SmallRect(0, 0, *size)  # this call reads the right and bottom edges as one past the end
+    kernel.SetConsoleScreenBufferInfoEx(handle, ctypes.byref(info))
+
+
 def tidy_classic_console() -> None:
-    """The classic console leaves its cursor blinking and keeps its scrollbars, though nothing can scroll."""
+    """The classic console leaves its cursor blinking and keeps its scrollbars, though nothing can scroll.
+    Once they are hidden, the text area is widened into the room they leave."""
     try:
         kernel = _kernel32()
         kernel.CreateFileW.restype = wintypes.HANDLE
@@ -186,16 +254,20 @@ def tidy_classic_console() -> None:
             wintypes.HANDLE,
         ]
         kernel.GetConsoleWindow.restype = wintypes.HWND
-        output = kernel.CreateFileW("CONOUT$", _READ_WRITE, _SHARE_READ_WRITE, None, _OPEN_EXISTING, 0, None)
-        if output and output != _INVALID_HANDLE:
-            cursor = _CursorInfo(25, False)
-            kernel.SetConsoleCursorInfo(wintypes.HANDLE(output), ctypes.byref(cursor))
-            kernel.CloseHandle(wintypes.HANDLE(output))
         user = ctypes.WinDLL("user32")
         user.ShowScrollBar.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.BOOL]
         window = kernel.GetConsoleWindow()
         if window:
             user.ShowScrollBar(window, _SB_BOTH, False)
+        output = kernel.CreateFileW("CONOUT$", _READ_WRITE, _SHARE_READ_WRITE, None, _OPEN_EXISTING, 0, None)
+        if output and output != _INVALID_HANDLE:
+            try:
+                if window:
+                    _fill_window(kernel, output, window)
+                cursor = _CursorInfo(25, False)  # after the resize, which can bring the cursor back
+                kernel.SetConsoleCursorInfo(wintypes.HANDLE(output), ctypes.byref(cursor))
+            finally:
+                kernel.CloseHandle(wintypes.HANDLE(output))
     except (OSError, AttributeError, ValueError):
         pass  # only looks: the app works the same with them showing
 

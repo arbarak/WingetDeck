@@ -187,3 +187,33 @@ def test_kernel32_font_lookup_does_not_raise():
 
     assert console_font() is None or isinstance(console_font(), str)
     assert ctypes.windll.kernel32 is not None
+
+
+# The classic console keeps room for a scrollbar the app hides, so the last columns were never drawn in.
+# Seen on a Windows 10 PC as a strip of old colours down the right edge after resizing the window.
+
+from wingetdeck.ui.console import filled_size  # noqa: E402
+
+
+def test_the_text_area_is_widened_to_the_room_the_hidden_scrollbar_leaves():
+    assert filled_size(client=(976, 480), font=(8, 16), buffer=(120, 30)) == (122, 30)
+
+
+def test_a_window_already_filled_is_left_alone():
+    assert filled_size(client=(976, 480), font=(8, 16), buffer=(122, 30)) is None
+
+
+def test_part_of_a_character_is_not_counted():
+    assert filled_size(client=(983, 495), font=(8, 16), buffer=(120, 30)) == (122, 30)
+
+
+def test_a_text_area_larger_than_the_window_is_brought_back_inside_it():
+    assert filled_size(client=(800, 480), font=(8, 16), buffer=(120, 30)) == (100, 30)
+
+
+def test_an_unknown_font_size_changes_nothing():
+    assert filled_size(client=(976, 480), font=(0, 0), buffer=(120, 30)) is None
+
+
+def test_a_minimised_window_changes_nothing():
+    assert filled_size(client=(0, 0), font=(8, 16), buffer=(120, 30)) is None

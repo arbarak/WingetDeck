@@ -22,7 +22,7 @@ body:
     id: version
     attributes:
       label: WingetDeck version
-      description: It is at the top of the app's window, and `WingetDeck-x64.exe --version` prints it.
+      description: It is at the top of the app's window, and in the exe's name, such as WingetDeck-1.0.3-x64.exe.
       placeholder: "1.0.1"
     validations:
       required: true
@@ -39,8 +39,8 @@ body:
     attributes:
       label: Which exe?
       options:
-        - WingetDeck-x64.exe
-        - WingetDeck-x86.exe
+        - 64-bit (x64)
+        - 32-bit (x86)
         - Running from source
     validations:
       required: true

@@ -159,3 +159,17 @@ def test_when_the_process_list_cannot_be_read_an_installer_is_assumed(tmp_data, 
 
     monkeypatch.setattr("wingetdeck.winget.real.tree_names", denied)
     assert handle.installer_running()
+
+
+def test_closing_the_window_with_the_x_is_logged_before_anything_is_stopped(tmp_data, monkeypatch):
+    """Windows ends the process soon after, so the log is written first."""
+    log = SessionLog(tmp_data, False, {})
+    order = []
+    monkeypatch.setattr(log, "info", lambda message, **kw: order.append(message))
+    handlers = []
+    monkeypatch.setattr(cli, "install_close_handler", handlers.append)
+    app = SimpleNamespace(run=lambda: None, _exception=None, return_code=0)
+    cli._run(app, log, SimpleNamespace(emergency_stop=lambda: order.append("stop")))
+    order.clear()
+    handlers[0]()
+    assert order == ["Window closed", "stop"]
