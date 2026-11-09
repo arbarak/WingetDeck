@@ -510,3 +510,16 @@ def test_sparkline_ascii_is_ascii():
 
 def test_sparkline_with_no_data_is_blank():
     assert sparkline([], width=4, ascii_mode=False) == ("    ", "    ")
+
+
+async def test_queue_update_arriving_before_the_panel_is_ready_is_kept(make_app):
+    from wingetdeck.core.queue import RunItem
+
+    app = make_app()
+    async with app.run_test(size=WIDE) as pilot:
+        await pilot.pause()
+        panel = QueuePanel()
+        panel.show((RunItem(pkg("A")), RunItem(pkg("B"))))
+        await app.screen.mount(panel)
+        await pilot.pause()
+        assert len(panel.query(".queue-row")) == 2

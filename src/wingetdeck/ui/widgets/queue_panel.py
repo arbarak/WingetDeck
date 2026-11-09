@@ -48,9 +48,18 @@ class QueuePanel(VerticalScroll):
         self.ascii_mode = ascii_mode
         self._signature: tuple = ()
         self._actions: dict[str, tuple[str, str]] = {}
+        self._waiting: tuple[RunItem, ...] | None = None
+
+    def on_mount(self) -> None:
+        if self._waiting is not None:
+            self.show(self._waiting)
+            self._waiting = None
 
     def show(self, items: tuple[RunItem, ...]) -> None:
         """Rebuilt only when something changed, so clicks are not lost during a fast download."""
+        if not self.is_attached:  # a run update can get here first; on_mount shows it
+            self._waiting = items
+            return
         signature = tuple((i.package.id, i.state) for i in items)
         if signature == self._signature:
             return
