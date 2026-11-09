@@ -123,9 +123,12 @@ class RealHandle:
             )
             self.pid = self._proc.pid
 
-    def _emit(self, events: list[Event]) -> None:
-        for event in events:
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, event)
+    def _emit(self, events: list[Event | None]) -> None:
+        try:
+            for event in events:
+                self._loop.call_soon_threadsafe(self._queue.put_nowait, event)
+        except RuntimeError:  # the window has closed and winget outlived it
+            pass
 
     def _chunk(self, chunk: str) -> None:
         self._transcript.write(chunk)
@@ -165,7 +168,7 @@ class RealHandle:
         self._log.info("winget finished", package=self._package_id, code=info.hex_code, meaning=info.message)
         self._transcript.close()
         self._emit([FinishedEvent(code)])
-        self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
+        self._emit([None])
 
     async def events(self) -> AsyncIterator[Event]:
         self._loop = asyncio.get_running_loop()

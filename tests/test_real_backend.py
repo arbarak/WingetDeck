@@ -227,3 +227,17 @@ async def test_pty_download_streams_progress_events(tmp_data):
     events = [e async for e in h.events()]
     assert any(isinstance(e, ProgressEvent) for e in events) and events[-1].exit_code == 0
     shutil.rmtree(target, ignore_errors=True)
+
+
+def test_output_after_the_app_loop_closed_is_ignored(tmp_data):
+    """winget can outlive the window when an installer is left to finish."""
+    import asyncio
+    import sys
+
+    log = SessionLog(tmp_data, False, {})
+    handle = real.RealHandle(log, "A", [sys.executable, "-c", "pass"], use_pty=False)
+    loop = asyncio.new_event_loop()
+    handle._loop = loop
+    handle._queue = asyncio.Queue()
+    loop.close()
+    handle._worker()

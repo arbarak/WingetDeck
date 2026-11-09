@@ -171,6 +171,16 @@ class RunQueue:
         self._stop_after = True
         return Effect.KILL
 
+    def kill_refused(self) -> None:
+        """Windows refused the kill, so the package carries on and its exit code tells the result."""
+        self._killing_as = None
+        self._kill_message = ""
+
+    def restart_active(self) -> None:
+        """The same package runs again from the start."""
+        self.stage = None
+        self.state = RunState.RUNNING
+
     def on_finished(self, exit_code: int) -> Effect:
         item = self.active
         if item is None:

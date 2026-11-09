@@ -260,3 +260,17 @@ def test_stop_after_on_a_frozen_download_lets_it_continue():
     assert q.stop_after() is Effect.THAW and q.state is RunState.RUNNING
     assert q.on_finished(OK) is Effect.NONE and q.state is RunState.FINISHED
     assert states(q) == [ItemState.DONE, ItemState.STOPPED, ItemState.STOPPED]
+
+
+def test_kill_refused_lets_the_exit_code_decide():
+    q = running(Stage.INSTALLING)
+    q.force_stop()
+    q.kill_refused()
+    q.on_finished(OK)
+    assert states(q) == [ItemState.DONE, ItemState.STOPPED, ItemState.STOPPED]
+
+
+def test_restart_active_clears_the_stage():
+    q = running(Stage.DOWNLOADING)
+    q.restart_active()
+    assert q.stage is None and q.active.package.id == "A" and q.state is RunState.RUNNING
