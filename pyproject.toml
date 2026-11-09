@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "wingetdeck"
 description = "Clickable terminal app for winget upgrades"
 requires-python = ">=3.12"
+license = { text = "MIT" }
 dynamic = ["version"]
 dependencies = [
     "textual>=8.2,<9",

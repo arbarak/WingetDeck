@@ -10,12 +10,14 @@ proves nothing about other Windows versions.
 
 ## Not yet done
 
-**The biggest gap: no real package has been upgraded by the finished exe yet.** The whole upgrade flow has only run
+**The biggest gap: Pause, Resume and Stop have not been used during a real upgrade by the finished exe.** It has done
+one real upgrade from start to finish (see "One real upgrade" below). Everything else in the upgrade flow has only run
 against the pretend winget in tests.
 
 | Not done | Why | What it would prove |
 |---|---|---|
-| A real upgrade with the finished exe, with Pause, Resume, Stop now | Sandbox needs about 10 GB free and C: has about 2 GB; a real upgrade on the owner's PC needs their yes | That the pieces below work together for real |
+| A real upgrade with the finished exe, with Pause, Resume, Stop now | Sandbox needs about 10 GB free and C: has about 2 GB; the one upgrade on the owner's PC ran without them | That the pieces below work together for real |
+| A real upgrade with the x86 exe, or of several packages in one run | Same | The x86 path without a pseudo console, and moving from one package to the next |
 | U2: long freezes during a download | Same | Whether a server drops a download frozen for many minutes, and whether winget then fails cleanly |
 | Default-downloader control in Sandbox | Same; the first attempt froze the source update rather than a download, so it was not valid | Confirms the host measurement in a clean system |
 | Exe in a clean Sandbox | Same | `scripts/portable_check.py` hides Python from the exe on the owner's PC, which is close but not a PC that never had it |
@@ -66,6 +68,25 @@ Each was run on the owner's PC, in a pseudo console with no window on the deskto
 | Session log reports live progress | Yes | No, as intended |
 
 Upgrade was never pressed in any of these.
+
+### One real upgrade
+
+On 9 November 2026 the final x64 exe upgraded one package on the owner's PC, wkhtmltox (`wkhtmltopdf.wkhtmltox`), driven
+through a pseudo console by the keys a person would press. The default downloader was in use, and the licence question
+was answered "Skip those packages".
+
+| What | Result |
+|---|---|
+| Only the ticked package was requested | Yes, by the session log |
+| Snapshot of installed versions saved before the run | Yes |
+| Live download progress from winget | Yes, 26.6 MB |
+| Installer hash checked by winget, then the install | Yes; the app's folder in Program Files was rewritten at the time of the run |
+| Winget's result | `0x00000000`, reported as Upgraded, 11 seconds |
+| App exit and crash logs | Exit code 0, no crash log |
+
+This package does not tell Windows its version, so winget still shows it as `Unknown` and offers it again after the
+upgrade. That is how this package behaves, and it means the upgrade did not show a new version number. A package that
+reports its version has not yet been upgraded by the exe.
 
 ### Other direct checks
 

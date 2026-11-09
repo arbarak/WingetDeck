@@ -19,8 +19,8 @@
 ![WingetDeck downloading Git at 45 percent, with Pause and Stop buttons, a log and a queue](docs/images/downloading.png)
 
 > [!WARNING]
-> **This is the first release.** It has read real upgrade lists from real winget, but the finished app has not yet
-> carried out a real upgrade. Try `WingetDeck-x64.exe --demo` first, which installs nothing.
+> **This is the first release.** The finished app has completed one real upgrade, but Pause and Stop have not yet been
+> used during a real upgrade. Try `WingetDeck-x64.exe --demo` first, which installs nothing.
 > [docs/TESTED.md](docs/TESTED.md) lists exactly what was and was not checked.
 
 ## What it does
@@ -163,8 +163,11 @@ Checks for a built exe, none of which open a window or upgrade anything:
 
 The design is written up in [docs/design.md](docs/design.md).
 
-## Credits
+## Credits and licence
 
 The look takes its inspiration from [wifit3](https://github.com/derv82/wifit3). The code and art here are original.
 Built with [Python](https://www.python.org/), [Textual](https://github.com/Textualize/textual),
 [pywinpty](https://github.com/andfoy/pywinpty) and [PyInstaller](https://pyinstaller.org/).
+
+WingetDeck is under the [MIT licence](LICENSE). The libraries bundled in the exes keep their own licences, listed in
+[THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
