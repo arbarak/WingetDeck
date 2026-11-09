@@ -1,0 +1,194 @@
+:root {
+  --pine: #0e2b24;
+  --pine-raised: #17392f;
+  --line: #2f5a4c;
+  --paper: #f1f4e8;
+  --mist: #b4cabd;
+  --mint: #86e8a2;
+  --amber: #ffc247;
+  --pause: #1773dc;
+  --stop: #c2184f;
+  --display: Bahnschrift, "DIN Alternate", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+  --body: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--pine);
+  color: var(--paper);
+  font: 1.0625rem/1.6 var(--body);
+}
+
+a { color: var(--mint); text-underline-offset: 0.18em; }
+a:hover { color: var(--paper); }
+
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+
+code { font: 0.92em var(--mono); color: var(--mint); overflow-wrap: anywhere; }
+
+img { display: block; max-width: 100%; height: auto; }
+
+h1, h2 {
+  font-family: var(--display);
+  font-stretch: 75%;
+  font-variation-settings: "wdth" 75, "wght" 600;
+  font-weight: 600;
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h1 { font-size: clamp(2.75rem, 4.6vw, 4.25rem); }
+h2 { font-size: clamp(2rem, 3.6vw, 3rem); margin-bottom: 1.25rem; }
+h3 { font-size: 1.0625rem; font-weight: 600; margin: 0 0 0.5rem; }
+
+/* The opening: the headline on the left, the whole app on the right, so Pause and Stop are in view */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+  gap: clamp(2rem, 4vw, 4rem);
+  align-items: center;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.25rem, 3vw, 3rem) clamp(3rem, 6vw, 5.5rem) clamp(1.25rem, 6vw, 6rem);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 0 2.25rem;
+  font: 600 1.375rem var(--display);
+}
+
+.lead { margin: 1.5rem 0 2rem; font-size: 1.1875rem; color: var(--mist); max-width: 32em; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0; }
+
+.button {
+  display: inline-block;
+  padding: 0.8rem 1.25rem;
+  border: 2px solid var(--line);
+  border-radius: 3px;
+  color: var(--paper);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button:hover { border-color: var(--mint); color: var(--paper); }
+
+.button.primary { background: var(--mint); border-color: var(--mint); color: var(--pine); }
+.button.primary:hover { background: var(--paper); border-color: var(--paper); color: var(--pine); }
+
+.minor-links { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; margin: 1rem 0 0; font-size: 0.9375rem; }
+
+.caution {
+  margin: 2rem 0 0;
+  padding-left: 1rem;
+  border-left: 4px solid var(--amber);
+  font-size: 0.9688rem;
+  max-width: 34em;
+}
+
+.caution strong { color: var(--amber); }
+
+.hero-shot { margin: 0; }
+
+.hero-shot img { width: 100%; border-radius: 8px; }
+
+/* Everything after it sits on one left edge */
+
+main section, footer {
+  padding: clamp(2.5rem, 5vw, 4.5rem) clamp(1.25rem, 6vw, 6rem);
+}
+
+.section-lead { margin: 0 0 1.75rem; color: var(--mist); max-width: 40em; }
+
+/* The memorable part: pick a moment and the real buttons appear. Radio buttons, so it needs no script. */
+
+.truth { background: var(--pine-raised); }
+
+.stages { display: flex; flex-wrap: wrap; gap: 0.5rem; max-width: 62rem; }
+
+.stages input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+.stages label {
+  padding: 0.55rem 0.95rem;
+  border: 2px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.9688rem;
+}
+
+.stages label:hover { border-color: var(--mint); }
+
+.stages input:checked + label { background: var(--paper); border-color: var(--paper); color: var(--pine); font-weight: 600; }
+
+.stages input:focus-visible + label { outline: 3px solid var(--amber); outline-offset: 3px; }
+
+.panel {
+  display: none;
+  flex-basis: 100%;
+  margin-top: 1.25rem;
+  padding: 1.5rem;
+  background: var(--pine);
+  border-radius: 3px;
+}
+
+.panel p { margin: 0; max-width: 40em; }
+
+#s-direct:checked ~ .p-direct,
+#s-default:checked ~ .p-default,
+#s-install:checked ~ .p-install,
+#s-between:checked ~ .p-between { display: block; }
+
+.panel .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; max-width: none; }
+
+.controls span {
+  padding: 0.65rem 1.05rem;
+  color: #fff;
+  font: 700 1rem var(--mono);
+  border-top: 3px solid rgb(255 255 255 / 0.28);
+  border-bottom: 3px solid rgb(0 0 0 / 0.35);
+}
+
+.controls .pause { background: var(--pause); }
+.controls .stop { background: var(--stop); }
+
+/* Lists */
+
+.plain { list-style: none; margin: 0; padding: 0; max-width: 42em; }
+
+.plain li { padding: 0.5rem 0; border-top: 1px solid var(--line); }
+
+.plain li:first-child { border-top: 0; padding-top: 0; }
+
+.status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem clamp(2rem, 5vw, 5rem); max-width: 62rem; margin-bottom: 1.5rem; }
+
+.status-grid > div:last-child h3 { color: var(--amber); }
+
+.start ol { margin: 0 0 1.25rem; padding-left: 1.4rem; max-width: 42em; }
+
+.start li { padding-left: 0.35rem; margin-bottom: 0.75rem; }
+
+.start li::marker { color: var(--mint); font-weight: 700; }
+
+.start > p { color: var(--mist); max-width: 42em; margin: 0; }
+
+footer { border-top: 1px solid var(--line); color: var(--mist); font-size: 0.9375rem; }
+
+footer p { margin: 0 0 0.5rem; max-width: 46em; }
+
+@media (max-width: 62rem) {
+  .hero { grid-template-columns: minmax(0, 1fr); padding-right: clamp(1.25rem, 6vw, 6rem); }
+}
+
+@media (max-width: 40rem) {
+  .status-grid { grid-template-columns: minmax(0, 1fr); }
+  .stages label { flex: 1 1 100%; }
+  .button { flex: 1 1 100%; text-align: center; }
+}

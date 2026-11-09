@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>WingetDeck: upgrade Windows apps, and stop when you need to</title>
+  <meta name="description" content="A clickable, portable app for winget upgrades on Windows, with honest Pause and Stop controls. One exe, no installer, no admin rights.">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-text">
+      <p class="brand"><img src="logo.svg" alt="" width="40" height="40"> WingetDeck</p>
+      <h1>Upgrade your Windows apps. Stop when you need to.</h1>
+      <p class="lead">Tick the apps, press Upgrade, and watch each one download and install. It runs winget for you in a window you can click. One exe, with no installer and no admin rights.</p>
+      <p class="actions">
+        <a class="button primary" href="https://github.com/arbarak/WingetDeck/releases/latest/download/WingetDeck-x64.exe">Download for 64-bit Windows</a>
+        <a class="button" href="https://github.com/arbarak/WingetDeck">View the source</a>
+      </p>
+      <p class="minor-links">
+        <a href="https://github.com/arbarak/WingetDeck/releases/latest/download/WingetDeck-x86.exe">32-bit version</a>
+        <a href="https://github.com/arbarak/WingetDeck/releases/latest">Checksums and release notes</a>
+        <a href="https://github.dev/arbarak/WingetDeck">Read the code in your browser</a>
+      </p>
+      <p class="caution"><strong>First release.</strong> It has read real upgrade lists, but the finished app has not yet carried out a real upgrade. Start with <code>WingetDeck-x64.exe --demo</code>, which installs nothing.</p>
+    </div>
+    <figure class="hero-shot">
+      <img src="downloading.png" width="2040" height="1173" alt="WingetDeck during a demo run: Git is downloading at 45 percent, with Pause and Stop buttons, a log, and a queue of seven packages.">
+    </figure>
+  </header>
+
+  <main>
+    <section class="truth" aria-labelledby="truth-title">
+      <h2 id="truth-title">The Pause button tells you what it will really do</h2>
+      <p class="section-lead">Stopping an upgrade safely depends on what winget is doing at that moment. The buttons change to match. Choose a moment to see them.</p>
+
+      <div class="stages">
+        <input type="radio" name="stage" id="s-direct" checked>
+        <label for="s-direct">Downloading, direct downloader on</label>
+        <input type="radio" name="stage" id="s-default">
+        <label for="s-default">Downloading, default downloader</label>
+        <input type="radio" name="stage" id="s-install">
+        <label for="s-install">Installing</label>
+        <input type="radio" name="stage" id="s-between">
+        <label for="s-between">Paused between packages</label>
+
+        <div class="panel p-direct">
+          <p class="controls"><span class="pause">Pause</span><span class="stop">Stop after this one</span><span class="stop">Stop now</span></p>
+          <p>Pause holds the download right away, and Resume carries on. In a test, the network fell from 47 MB/s to zero within a second.</p>
+        </div>
+        <div class="panel p-default">
+          <p class="controls"><span class="pause">Pause after this package</span><span class="stop">Stop after this one</span><span class="stop">Stop now</span></p>
+          <p>A Windows service does this download and keeps going even if winget is stopped, so a true pause is not possible. WingetDeck says so, and offers to change the one winget setting that makes it possible. It backs up your settings first, and you can undo it.</p>
+        </div>
+        <div class="panel p-install">
+          <p class="controls"><span class="pause">Pause after this install</span><span class="stop">Stop after this one</span><span class="stop">Force stop</span></p>
+          <p>An installer is never frozen, because that could leave an app half-installed. Force stop is there for an installer that has hung, and it asks you twice.</p>
+        </div>
+        <div class="panel p-between">
+          <p class="controls"><span class="pause">Resume</span><span class="stop">Stop</span></p>
+          <p>After a pause takes effect, nothing is running. Resume starts the next package, and Stop ends the run. If the app closes at any point, it offers to continue the queue next time.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="columns" aria-labelledby="care-title">
+      <h2 id="care-title">What it does to your PC</h2>
+      <ul class="plain">
+        <li>It upgrades only what you tick.</li>
+        <li>It keeps its data in a <code>WingetDeck-data</code> folder beside the exe. If that folder cannot be written to, or you run it as administrator, it uses <code>%LOCALAPPDATA%\WingetDeck</code> and tells you so.</li>
+        <li>It saves a list of your installed versions before each run, so there is a record of how things were.</li>
+        <li>It has no network code of its own. All downloads are winget's.</li>
+        <li>Its logs stay on your PC. A diagnostic report removes your user name and the secrets it recognises, and shows what it includes before saving. Read it before you share it.</li>
+      </ul>
+    </section>
+
+    <section class="status" aria-labelledby="status-title">
+      <h2 id="status-title">What has been tested</h2>
+      <div class="status-grid">
+        <div>
+          <h3>Checked</h3>
+          <ul class="plain">
+            <li>Windows 11 x64 with winget 1.29</li>
+            <li>Listing real upgrades through both exes, without installing anything</li>
+            <li>Running from read-only folders, and from paths with spaces and accents</li>
+            <li>Seven window sizes, using the real terminal driver</li>
+            <li>Winget's own download pausing and stopping, in Windows Sandbox, before the app was finished</li>
+            <li>465 automated tests</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Not checked yet</h3>
+          <ul class="plain">
+            <li>A real upgrade from start to finish with this app</li>
+            <li>A download frozen for many minutes</li>
+            <li>Windows 10, Windows Server and ARM64</li>
+            <li>Windows in other languages</li>
+          </ul>
+        </div>
+      </div>
+      <p><a href="https://github.com/arbarak/WingetDeck/blob/main/docs/TESTED.md">Read the full list</a></p>
+    </section>
+
+    <section class="start" aria-labelledby="start-title">
+      <h2 id="start-title">Get started</h2>
+      <ol>
+        <li>Download <code>WingetDeck-x64.exe</code> and put it in any folder. You need Windows 10 version 1809 or newer, and winget 1.4 or newer.</li>
+        <li>Open it. The exe is not signed, so Windows may warn that the publisher is unknown. If you trust this page, choose More info, then Run anyway. You can compare the file with the checksums on the release page first.</li>
+        <li>Choose a source, press START, tick your apps, and press UPGRADE.</li>
+      </ol>
+      <p>The 32-bit version works the same way, but shows an animation and the elapsed time instead of a live percentage.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>The look takes its inspiration from <a href="https://github.com/derv82/wifit3">wifit3</a>. The code and art are original. This page loads nothing from other sites and sets no cookies.</p>
+    <p><a href="https://github.com/arbarak/WingetDeck/security/policy">Report a security problem</a></p>
+  </footer>
+</body>
+</html>
