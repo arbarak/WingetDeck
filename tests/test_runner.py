@@ -453,3 +453,28 @@ async def test_elapsed_stops_when_the_run_finishes(make):
     await h.runner.wait()
     clock["now"] = 500.0
     assert h.runner.view.elapsed_s == 3.0
+
+
+async def test_emergency_stop_when_console_closes_thaws_kills_and_saves(make):
+    h = make(Recording([], speed=5))
+    await h.runner.start([pkg("A"), pkg("B")], options)
+    await h.until_stage(Stage.DOWNLOADING)
+    h.runner.pause()
+    h.runner.emergency_stop()
+    assert h.backend.actions == ["freeze", "thaw", "kill"]
+    assert [i.id for i in h.store.load_queue().items] == ["A", "B"]
+    await h.runner.shutdown()
+    assert h.backend.actions == ["freeze", "thaw", "kill"], "only once"
+
+
+async def test_emergency_stop_leaves_an_installer_alone(make):
+    h = make(Recording([], speed=20))
+    await h.runner.start([pkg("A")], options)
+    await h.until_stage(Stage.INSTALLING)
+    h.runner.emergency_stop()
+    assert h.backend.actions == []
+    await h.runner.shutdown()
+
+
+def test_emergency_stop_with_no_run_is_harmless(make):
+    make(FakeBackend([])).runner.emergency_stop()

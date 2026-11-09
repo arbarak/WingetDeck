@@ -375,33 +375,40 @@ class Runner:
         self._log.warn("Force stop pressed")
         return self._kill(self._queue.force_stop())
 
-    async def shutdown(self) -> None:
-        """The window is closing. Nothing may stay frozen, an installer is left to finish, and what
-        was not finished is saved so it can be resumed next time."""
+    def emergency_stop(self) -> bool:
+        """The console is closing and Windows is about to end this process, so no event loop can be
+        relied on. A frozen winget would otherwise stay suspended for ever. Returns True when a
+        process was told to stop and may still be finishing."""
         q = self._queue
-        if q is None or self._driver is None or self._driver.done():
-            return
+        if q is None or self._closing or self._driver is None or self._driver.done():
+            return False
         try:
             self._store.save_queue(q.snapshot())
         except OSError as e:
             self._log.error("Could not save the queue while closing", error=repr(e))
         self._closing = True
-        wait_for_it = False
-        if q.active is not None and self._handle is not None:
-            frozen = q.state is RunState.PAUSED
-            if frozen or q.stage is Stage.DOWNLOADING:
-                if frozen:
-                    self._handle.thaw()
-                result = self._handle.kill()
-                wait_for_it = result.killed
-                self._log.warn("Closed during a download, winget stopped", package=q.active.package.id,
-                               killed=result.killed)
-            else:
-                self._log.warn("Closed while an installer was running, it was left to finish",
-                               package=q.active.package.id)
-        self._wake.set()
-        if wait_for_it:
+        if q.active is None or self._handle is None:
+            return False
+        frozen = q.state is RunState.PAUSED
+        if not frozen and q.stage is not Stage.DOWNLOADING:
+            self._log.warn("Closed while an installer was running, it was left to finish",
+                           package=q.active.package.id)
+            return False
+        if frozen:
+            self._handle.thaw()
+        result = self._handle.kill()
+        self._log.warn("Closed during a download, winget stopped", package=q.active.package.id,
+                       killed=result.killed)
+        return result.killed
+
+    async def shutdown(self) -> None:
+        """The window is closing. Nothing may stay frozen, an installer is left to finish, and what
+        was not finished is saved so it can be resumed next time."""
+        if self._queue is None or self._driver is None or self._driver.done():
+            return
+        if self.emergency_stop():
             await asyncio.wait({self._driver}, timeout=_SHUTDOWN_WAIT_SECONDS)
+        self._wake.set()
         for task in (self._driver, self._ticker):
             if task is not None and not task.done():
                 task.cancel()

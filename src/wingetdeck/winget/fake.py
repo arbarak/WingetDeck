@@ -111,6 +111,9 @@ class FakeBackend:
             settings_locked=False,
         )
 
+    def refresh_capabilities(self) -> None:
+        pass
+
     def add_package(self, package: Package) -> None:
         self.packages.append(package)
 

@@ -1,0 +1,199 @@
+/* Colours and layout follow the approved mock. Green dark is the default theme. */
+
+Screen {
+    background: $background;
+    color: $foreground;
+}
+
+Header {
+    background: $panel;
+    color: $foreground;
+}
+
+Footer {
+    background: $panel;
+}
+
+FooterKey {
+    background: $panel;
+    color: $foreground;
+}
+
+FooterKey .footer-key--key {
+    background: $panel;
+    color: $wd-key;
+    text-style: bold;
+}
+
+FooterKey .footer-key--description {
+    background: $panel;
+    color: $foreground;
+}
+
+/* Buttons: bright top edge, dark bottom edge, like the mock */
+
+Button {
+    min-width: 10;
+    height: 3;
+    text-style: bold;
+    line-pad: 1;
+    background: $wd-green;
+    color: $wd-green-text;
+    border: none;
+    border-top: tall $wd-green-top;
+    border-bottom: tall $wd-green-low;
+}
+
+Button:hover {
+    background: $wd-green-top;
+    color: $wd-green-text;
+    border-top: tall $wd-green-top;
+    border-bottom: tall $wd-green-low;
+}
+
+Button:focus {
+    text-style: bold reverse;
+}
+
+Button.-active {
+    background: $wd-green-low;
+    tint: transparent;
+}
+
+Button.blue {
+    background: $wd-blue;
+    color: white;
+    border-top: tall $wd-blue-top;
+    border-bottom: tall $wd-blue-low;
+}
+
+Button.blue:hover {
+    background: $wd-blue-top;
+    color: white;
+    border-top: tall $wd-blue-top;
+    border-bottom: tall $wd-blue-low;
+}
+
+Button.red {
+    background: $wd-red;
+    color: white;
+    border-top: tall $wd-red-top;
+    border-bottom: tall $wd-red-low;
+}
+
+Button.red:hover {
+    background: $wd-red-top;
+    color: white;
+    border-top: tall $wd-red-top;
+    border-bottom: tall $wd-red-low;
+}
+
+Button.gray {
+    background: $wd-gray;
+    color: $foreground;
+    border-top: tall $wd-gray-top;
+    border-bottom: tall $wd-gray-low;
+}
+
+Button.gray:hover {
+    background: $wd-gray-top;
+    color: $foreground;
+    border-top: tall $wd-gray-top;
+    border-bottom: tall $wd-gray-low;
+}
+
+Button:disabled {
+    background: $wd-off;
+    color: $wd-off-text;
+    border-top: tall $wd-off;
+    border-bottom: tall $wd-off;
+    opacity: 100%;
+}
+
+/* Splash */
+
+#splash-body {
+    width: 100%;
+    height: 1fr;
+    align: center middle;
+}
+
+#logo {
+    margin-bottom: 1;
+}
+
+#prompt {
+    width: auto;
+    margin-bottom: 1;
+}
+
+#splash-row {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+}
+
+#sources {
+    width: 40;
+    height: auto;
+    max-height: 8;
+    background: $wd-list;
+    margin-right: 1;
+}
+
+#sources > ListItem {
+    background: $wd-list;
+    padding: 0 1;
+}
+
+#sources > ListItem:hover {
+    background: $panel;
+}
+
+#sources > ListItem.-highlight {
+    background: $wd-blue;
+    color: white;
+    text-style: bold;
+}
+
+#splash-row Button {
+    margin-right: 1;
+}
+
+#versions {
+    width: auto;
+    color: $wd-dim;
+    margin-top: 1;
+}
+
+#notes {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    color: $warning;
+}
+
+/* Winget missing */
+
+#no-winget-body {
+    width: 100%;
+    height: 1fr;
+    align: center middle;
+    padding: 1 2;
+}
+
+#help {
+    width: auto;
+    max-width: 90;
+    height: auto;
+    margin-bottom: 1;
+}
+
+#no-winget-buttons {
+    width: auto;
+    height: auto;
+}
+
+#no-winget-buttons Button {
+    margin-right: 1;
+}
