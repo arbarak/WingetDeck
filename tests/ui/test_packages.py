@@ -329,13 +329,13 @@ def test_columns_drop_as_the_window_narrows():
     assert [c.key for c in columns(60, rows)] == ["tick", "name", "versions"]
 
 
-def test_columns_fit_the_window_and_extra_space_goes_to_names():
+def test_columns_fit_the_window_and_share_extra_space():
     rows = demo_packages()
     for width in (50, 79, 80, 119, 120, 200, 300):
         total = sum(c.width for c in columns(width, rows)) + len(columns(width, rows)) - 1
         assert total <= width, width
     wide = {c.key: c.width for c in columns(300, rows)}
-    assert wide["name"] > 100 and wide["id"] <= 30
+    assert wide["name"] > 40 and wide["id"] > 40 and wide["installed"] > 40
 
 
 def test_wide_names_are_cut_by_display_width(tmp_path):

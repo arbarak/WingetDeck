@@ -43,6 +43,7 @@ _CONSENT = (
     "You can read a package's licence on its homepage from the details panel.\n\n"
     "Without this, packages that need it are marked as skipped. You can change it in Settings."
 )
+_CONSOLE_SETTLE_SECONDS = 0.3  # the classic console puts its scrollbars back just after a resize
 _AGREE = "Accept agreements"
 _NO_AGREE = "Skip those packages"
 _GO_ON = "Go on without it"
@@ -82,12 +83,16 @@ class WingetDeckApp(App):
         log: SessionLog,
         runner: Runner,
         ascii_mode: bool = False,
+        symbols: Callable[[str], str] | None = None,
+        tidy_console: Callable[[], None] | None = None,
     ) -> None:
         self.backend = backend
         self.store = store
         self.log_file = log  # App.log is Textual's own
         self.runner = runner
         self.ascii_mode = ascii_mode
+        self.symbols = to_ascii if ascii_mode else symbols
+        self.tidy_console = tidy_console
         self._run_listeners: list[Callable[[RunView], None]] = []
         self._resume_offered = False
         self._last_title = ""
@@ -112,6 +117,15 @@ class WingetDeckApp(App):
         self.runner.set_stall_minutes(settings.stall_minutes)
         self._show_on_taskbar(None)
         self.push_screen(SplashScreen())
+        self._tidy_console()
+
+    def on_resize(self) -> None:
+        self._tidy_console()
+        self.set_timer(_CONSOLE_SETTLE_SECONDS, self._tidy_console)
+
+    def _tidy_console(self) -> None:
+        if self.tidy_console is not None:
+            self.tidy_console()
 
     def add_run_listener(self, listener: Callable[[RunView], None]) -> None:
         self._run_listeners.append(listener)
@@ -138,14 +152,15 @@ class WingetDeckApp(App):
 
     def get_driver_class(self) -> type[Driver]:
         driver = super().get_driver_class()
-        if not self.ascii_mode:
+        translate = self.symbols
+        if translate is None:
             return driver
 
-        class AsciiDriver(driver):
+        class SymbolDriver(driver):
             def write(self, data: str) -> None:
-                super().write(to_ascii(data))
+                super().write(translate(data))
 
-        return AsciiDriver
+        return SymbolDriver
 
     def write_terminal(self, text: str) -> None:
         if self._driver is not None:

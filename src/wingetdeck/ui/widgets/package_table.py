@@ -3,7 +3,7 @@ column under the mouse, and the columns change with the window width."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from rich.cells import cell_len, set_cell_size
 from rich.segment import Segment
@@ -22,6 +22,8 @@ _TICK_WIDTH = 3
 _VERSION_MIN = 9
 _VERSION_MAX = 16
 _ID_MAX = 30
+_NAME_MIN = 24
+_SHARING_COLUMNS = 5  # name, id, installed, available, source; the change column stays at the edge
 _WIDE = 120
 _MEDIUM = 80
 _RANK = {ChangeKind.MAJOR: 0, ChangeKind.MINOR: 1, ChangeKind.PATCH: 2, ChangeKind.UNKNOWN: 3}
@@ -58,7 +60,7 @@ def _version_width(rows: list[Package], attribute: str) -> int:
 
 
 def columns(width: int, rows: list[Package]) -> list[Column]:
-    """Which columns show at this width. Extra space goes to the names, not to stretched columns."""
+    """Which columns show at this width. Long ids show in full when there is room, and what is left is shared."""
     installed = _version_width(rows, "installed")
     available = _version_width(rows, "available")
     if width < _MEDIUM:
@@ -77,9 +79,18 @@ def columns(width: int, rows: list[Package]) -> list[Column]:
         name = width - used - len(fixed) - 1
         return [Column("tick", _TICK_WIDTH), Column("name", name), *fixed]
     room = width - used - len(fixed) - 2
-    longest_id = max((len(p.id) for p in rows), default=0)
-    id_width = min(max(longest_id, 10), _ID_MAX, room // 2)
-    return [Column("tick", _TICK_WIDTH), Column("name", room - id_width), Column("id", id_width), *fixed]
+    longest_id = max(max((len(p.id) for p in rows), default=0), 10)
+    longest_name = max((cell_len(p.name) for p in rows), default=0)
+    if longest_id + longest_name <= room:
+        id_width = longest_id
+    else:
+        id_width = min(longest_id, _ID_MAX, room // 2)
+    name = room - id_width
+    spare = max(name - max(longest_name, _NAME_MIN), 0)
+    share = spare // _SHARING_COLUMNS
+    name -= share * (_SHARING_COLUMNS - 1)
+    widened = [replace(c, width=c.width + share) if c.key != "change" else c for c in fixed]
+    return [Column("tick", _TICK_WIDTH), Column("name", name), Column("id", id_width + share), *widened]
 
 
 def _sort_key(package: Package, key: str):

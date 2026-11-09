@@ -670,6 +670,11 @@ ConfirmDialog {
     max-width: 60;
 }
 
+#settings-body Checkbox, #package-form Checkbox {
+    width: 100%;
+    max-width: 94;
+}
+
 #defaults, #package-form {
     height: auto;
 }

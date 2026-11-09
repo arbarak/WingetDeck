@@ -1,5 +1,4 @@
 import asyncio
-import sys
 import threading
 import time
 from dataclasses import replace
@@ -70,13 +69,11 @@ def test_normal_app_keeps_the_stock_driver(make_app):
     assert "Ascii" not in app.get_driver_class().__name__
 
 
-def test_ascii_mode_has_no_non_ascii_in_rendered_screen(tmp_path):
+def test_ascii_mode_has_no_non_ascii_in_rendered_screen(tmp_path, demo_command):
     """The real driver in a real pseudo-console: every byte sent to the terminal is checked."""
     from winpty import PtyProcess
 
-    process = PtyProcess.spawn(
-        [sys.executable, "-m", "wingetdeck", "--demo", "--ascii"], dimensions=(36, 120), cwd=str(tmp_path)
-    )
+    process = PtyProcess.spawn([*demo_command, "--ascii"], dimensions=(36, 120), cwd=str(tmp_path))
     seen = []
 
     def read():

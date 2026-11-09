@@ -9,7 +9,7 @@ import platform
 import re
 import struct
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -24,6 +24,14 @@ MIN_BUILD = 17763  # Windows 10 1809, the oldest winget runs on
 MIN_WINGET = (1, 4)  # the first with --include-unknown, which the table relies on
 _DEVELOPMENT_BUILD = (0, 0)  # not a release, so its number says nothing about its age
 _RASTER_FONT = "Terminal"
+_DEFAULT_CHARSET = 1
+_MARK_MISSING = 1  # GGI_MARK_NONEXISTING_GLYPHS
+_NO_GLYPH = 0xFFFF
+_READ_WRITE = 0xC0000000
+_SHARE_READ_WRITE = 3
+_OPEN_EXISTING = 3
+_INVALID_HANDLE = 2**64 - 1 if struct.calcsize("P") == 8 else 2**32 - 1
+_SB_BOTH = 3
 _VERSION = re.compile(r"v?(\d+)\.(\d+)")
 
 
@@ -81,6 +89,8 @@ class QuickEditGuard:
 class TerminalInfo:
     name: str
     ascii_recommended: bool
+    basic_symbols: bool = False
+    font: str | None = None
 
 
 class _CoordFont(ctypes.Structure):
@@ -110,16 +120,102 @@ def console_font() -> str | None:
     return info.FaceName if ok else None
 
 
-def detect_terminal(env: Mapping[str, str] | None = None, font: str | None = None) -> TerminalInfo:
+def console_window_visible() -> bool:
+    """A console hosted by another terminal has a hidden window, and that terminal does the drawing."""
+    try:
+        user = ctypes.WinDLL("user32")
+        kernel = _kernel32()
+        kernel.GetConsoleWindow.restype = wintypes.HWND
+        user.IsWindowVisible.argtypes = [wintypes.HWND]
+        window = kernel.GetConsoleWindow()
+        return bool(window and user.IsWindowVisible(window))
+    except (OSError, AttributeError, ValueError):
+        return False
+
+
+def font_has_glyph(face: str) -> Callable[[str], bool] | None:
+    """Ask Windows whether a font can draw a character, or None when the font cannot be read."""
+    try:
+        gdi = ctypes.WinDLL("gdi32")
+        gdi.CreateCompatibleDC.argtypes = [wintypes.HDC]
+        gdi.CreateCompatibleDC.restype = wintypes.HDC
+        gdi.CreateFontW.restype = wintypes.HANDLE
+        gdi.SelectObject.argtypes = [wintypes.HDC, wintypes.HANDLE]
+        gdi.SelectObject.restype = wintypes.HANDLE
+        gdi.GetGlyphIndicesW.argtypes = [
+            wintypes.HDC,
+            wintypes.LPCWSTR,
+            ctypes.c_int,
+            ctypes.POINTER(wintypes.WORD),
+            wintypes.DWORD,
+        ]
+        gdi.GetGlyphIndicesW.restype = wintypes.DWORD
+        context = gdi.CreateCompatibleDC(None)
+        font = gdi.CreateFontW(16, 0, 0, 0, 400, 0, 0, 0, _DEFAULT_CHARSET, 0, 0, 0, 0, face)
+        if not context or not font or not gdi.SelectObject(context, font):
+            return None
+    except (OSError, AttributeError, ValueError):
+        return None
+
+    def has(char: str) -> bool:
+        if ord(char) > 0xFFFF:  # the classic console draws one 16-bit character per cell
+            return False
+        glyph = wintypes.WORD()
+        done = gdi.GetGlyphIndicesW(context, char, 1, ctypes.byref(glyph), _MARK_MISSING)
+        return done == 1 and glyph.value != _NO_GLYPH
+
+    return has
+
+
+class _CursorInfo(ctypes.Structure):
+    _fields_ = [("dwSize", wintypes.DWORD), ("bVisible", wintypes.BOOL)]
+
+
+def tidy_classic_console() -> None:
+    """The classic console leaves its cursor blinking and keeps its scrollbars, though nothing can scroll."""
+    try:
+        kernel = _kernel32()
+        kernel.CreateFileW.restype = wintypes.HANDLE
+        kernel.CreateFileW.argtypes = [
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        ]
+        kernel.GetConsoleWindow.restype = wintypes.HWND
+        output = kernel.CreateFileW("CONOUT$", _READ_WRITE, _SHARE_READ_WRITE, None, _OPEN_EXISTING, 0, None)
+        if output and output != _INVALID_HANDLE:
+            cursor = _CursorInfo(25, False)
+            kernel.SetConsoleCursorInfo(wintypes.HANDLE(output), ctypes.byref(cursor))
+            kernel.CloseHandle(wintypes.HANDLE(output))
+        user = ctypes.WinDLL("user32")
+        user.ShowScrollBar.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.BOOL]
+        window = kernel.GetConsoleWindow()
+        if window:
+            user.ShowScrollBar(window, _SB_BOTH, False)
+    except (OSError, AttributeError, ValueError):
+        pass  # only looks: the app works the same with them showing
+
+
+def detect_terminal(
+    env: Mapping[str, str] | None = None, font: str | None = None, window_visible: bool = True
+) -> TerminalInfo:
     if env is None:
-        env, font = os.environ, console_font()
+        env, font, window_visible = os.environ, console_font(), console_window_visible()
     if env.get("WT_SESSION"):
         return TerminalInfo("Windows Terminal", False)
     if env.get("TERM_PROGRAM"):
         return TerminalInfo(env["TERM_PROGRAM"], False)
     if env.get("ConEmuPID"):
         return TerminalInfo("ConEmu", False)
-    return TerminalInfo("classic console", font == _RASTER_FONT)
+    if not window_visible:
+        return TerminalInfo("terminal with its own window", False)
+    if font == _RASTER_FONT:
+        return TerminalInfo("classic console", True, False, font)
+    return TerminalInfo("classic console", False, True, font)
 
 
 def windows_build() -> int:
@@ -164,6 +260,7 @@ def session_header(
         "machine": platform.machine(),
         "bits": struct.calcsize("P") * 8,
         "terminal": terminal.name,
+        "font": terminal.font,
         "size": f"{size[0]}x{size[1]}",
         "locale": locale_name,
         "elevated": elevated,

@@ -120,18 +120,19 @@ def test_old_windows_can_still_try_the_demo_or_print_the_version(monkeypatch, ca
 
 
 @pytest.mark.parametrize(
-    "env,font,name,plain",
+    "env,font,name,plain,basic",
     [
-        ({"WT_SESSION": "x"}, None, "Windows Terminal", False),
-        ({"TERM_PROGRAM": "vscode"}, None, "vscode", False),
-        ({"ConEmuPID": "1"}, None, "ConEmu", False),
-        ({}, "Consolas", "classic console", False),
-        ({}, "Terminal", "classic console", True),
-        ({}, None, "classic console", False),
+        ({"WT_SESSION": "x"}, None, "Windows Terminal", False, False),
+        ({"TERM_PROGRAM": "vscode"}, None, "vscode", False, False),
+        ({"ConEmuPID": "1"}, None, "ConEmu", False, False),
+        ({}, "Consolas", "classic console", False, True),
+        ({}, "Terminal", "classic console", True, False),
+        ({}, None, "classic console", False, True),
     ],
 )
-def test_detect_terminal(env, font, name, plain):
-    assert detect_terminal(env, font) == TerminalInfo(name, plain)
+def test_detect_terminal(env, font, name, plain, basic):
+    info = detect_terminal(env, font)
+    assert (info.name, info.ascii_recommended, info.basic_symbols) == (name, plain, basic)
 
 
 def test_session_header_has_what_a_bug_report_needs():

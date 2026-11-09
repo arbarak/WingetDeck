@@ -78,7 +78,8 @@ class PackagesScreen(DeckScreen):
                 yield Button("UPGRADE", id="upgrade", disabled=True)
             with VerticalScroll(id="table-log-box"):
                 yield Static("", id="table-log")
-        yield Footer()
+        # This screen has the most keys. Ctrl+P still works, and leaving it out here keeps them all on one line.
+        yield Footer(show_command_palette=False)
 
     def on_mount(self) -> None:
         self.query_one("#filter", Input).display = False

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+from collections.abc import Callable
 
 from . import __version__
 from .core.console import install_close_handler
@@ -13,9 +14,22 @@ from .core.runner import Runner
 from .core.store import AlreadyRunning, SingleInstance, Store
 from .paths import DataDir, app_data_dir, is_elevated
 from .ui.app import WingetDeckApp
-from .ui.console import QuickEditGuard, check_support, detect_terminal, session_header, user_locale, windows_build
+from .ui.console import (
+    QuickEditGuard,
+    TerminalInfo,
+    check_support,
+    detect_terminal,
+    font_has_glyph,
+    session_header,
+    tidy_classic_console,
+    user_locale,
+    windows_build,
+)
+from .ui.symbols import basic_symbols, lacks_any_stand_in
 from .winget.fake import FakeBackend, demo_packages
 from .winget.real import RealBackend
+
+_USUAL_CONSOLE_FONT = "Consolas"
 
 
 def _parse(argv: list[str] | None) -> argparse.Namespace:
@@ -23,8 +37,15 @@ def _parse(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--demo", action="store_true", help="try the app with a pretend winget; nothing is installed")
     parser.add_argument("--debug", action="store_true", help="also log every line winget prints")
     parser.add_argument("--ascii", action="store_true", help="use plain characters for consoles that cannot draw symbols")
+    parser.add_argument("--basic", action="store_true", help="use only symbols the console font can draw")
     parser.add_argument("--version", action="store_true", help="print the version and exit")
     return parser.parse_args(argv)
+
+
+def _symbols_for(terminal: TerminalInfo) -> Callable[[str], str]:
+    """Measure this console's font. If it cannot be read, assume it lacks everything that has a stand-in."""
+    has_glyph = font_has_glyph(terminal.font or _USUAL_CONSOLE_FONT) or lacks_any_stand_in
+    return basic_symbols(has_glyph)
 
 
 def demo_data_dir(data: DataDir) -> DataDir:
@@ -83,7 +104,16 @@ def main(argv: list[str] | None = None) -> int:
             store = Store(data, log)
             backend = FakeBackend(demo_packages()) if args.demo else RealBackend(log)
             runner = Runner(backend, store, log, lambda view: None)
-            return _run(WingetDeckApp(backend, store, log, runner, ascii_mode=args.ascii or terminal.ascii_recommended), log, runner)
+            app = WingetDeckApp(
+                backend,
+                store,
+                log,
+                runner,
+                ascii_mode=args.ascii or terminal.ascii_recommended,
+                symbols=_symbols_for(terminal) if args.basic or terminal.basic_symbols else None,
+                tidy_console=tidy_classic_console if terminal.basic_symbols or terminal.ascii_recommended else None,
+            )
+            return _run(app, log, runner)
     except AlreadyRunning:
         print("WingetDeck is already running. Switch to its window.", file=sys.stderr)
         return 1
