@@ -1,0 +1,34 @@
+"""U2: how long can a direct download stay frozen and still finish after thawing?"""
+
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+from spike_tools import Run, save, set_downloader, suspend
+
+out = sys.argv[1]
+PACKAGE = "Git.Git"
+ACCEPT = ["--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"]
+set_downloader("wininet")
+results = {}
+for minutes in (1, 5, 15):
+    run = Run("download", "--id", PACKAGE, "-e", "-s", "winget", "-d", tempfile.mkdtemp(), *ACCEPT)
+    started = run.wait_for_progress()
+    at_freeze = run.sizes[-1] if run.sizes else None
+    suspend(run.pid)
+    time.sleep(minutes * 60)
+    suspend(run.pid, resume=True)
+    thawed = time.time()
+    code = run.wait(300)
+    results[f"{minutes}_min"] = {
+        "started": started,
+        "at_freeze": at_freeze,
+        "last_progress": run.sizes[-1] if run.sizes else None,
+        "exit": hex(code & 0xFFFFFFFF) if code is not None else "hung",
+        "seconds_after_thaw": round(time.time() - thawed, 1),
+        "tail": run.clean()[-400:],
+    }
+    save(out, "u2.json", results)
+    Path(out, "pty_u2.txt").write_text("".join(run.raw), encoding="utf-8", newline="")
+set_downloader(None)
