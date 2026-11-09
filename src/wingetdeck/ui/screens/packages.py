@@ -202,7 +202,10 @@ class PackagesScreen(DeckScreen):
         self.scan_packages(update_sources=True)
 
     def _update_refresh(self) -> None:
-        refresh = self.query_one("#refresh", Button)
+        found = self.query("#refresh")  # a scan can end after the screen has closed
+        if not found:
+            return
+        refresh = found.first(Button)
         blocked = run_is_active(self.app.runner.view)
         refresh.disabled = blocked or self._scanning
         refresh.tooltip = _REFRESH_BLOCKED if blocked else "Update winget's sources, then check again"

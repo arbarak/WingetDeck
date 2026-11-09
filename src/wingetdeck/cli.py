@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import platform
+import shutil
 import sys
 
 from . import __version__
@@ -13,6 +13,7 @@ from .core.runner import Runner
 from .core.store import AlreadyRunning, SingleInstance, Store
 from .paths import DataDir, app_data_dir, is_elevated
 from .ui.app import WingetDeckApp
+from .ui.console import QuickEditGuard, check_support, detect_terminal, session_header, user_locale, windows_build
 from .winget.fake import FakeBackend, demo_packages
 from .winget.real import RealBackend
 
@@ -42,7 +43,8 @@ def _crash(log: SessionLog, error: BaseException) -> int:
 def _run(app: WingetDeckApp, log: SessionLog, runner: Runner) -> int:
     install_close_handler(runner.emergency_stop)
     try:
-        app.run()
+        with QuickEditGuard():
+            app.run()
     except Exception as e:
         return _crash(log, e)
     finally:
@@ -65,23 +67,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.version:
         print(f"WingetDeck {__version__}")
         return 0
+    problem = check_support(windows_build())
+    if problem and not args.demo:
+        print(problem, file=sys.stderr)
+        return 1
+    terminal = detect_terminal()
     data = app_data_dir()
     if args.demo:
         data = demo_data_dir(data)
     try:
         with SingleInstance(data):
-            header = {
-                "app": __version__,
-                "windows": platform.version(),
-                "machine": platform.machine(),
-                "elevated": is_elevated(),
-                "demo": args.demo,
-            }
+            size = shutil.get_terminal_size()
+            header = session_header(args.demo, terminal, (size.columns, size.lines), user_locale(), is_elevated())
             log = SessionLog(data, args.debug, header)
             store = Store(data, log)
             backend = FakeBackend(demo_packages()) if args.demo else RealBackend(log)
             runner = Runner(backend, store, log, lambda view: None)
-            return _run(WingetDeckApp(backend, store, log, runner, ascii_mode=args.ascii), log, runner)
+            return _run(WingetDeckApp(backend, store, log, runner, ascii_mode=args.ascii or terminal.ascii_recommended), log, runner)
     except AlreadyRunning:
         print("WingetDeck is already running. Switch to its window.", file=sys.stderr)
         return 1

@@ -26,9 +26,8 @@ class TitleBar(Widget):
     def render(self) -> Text:
         width = max(self.size.width, 1)
         app = self.app
-        icon = "o" if app.ascii_mode else "○"
-        title = f"{app.title} - {app.sub_title}" if app.ascii_mode else f"{app.title} — {app.sub_title}"
-        title = title.encode("ascii", "replace").decode() if app.ascii_mode else title
+        icon = "○"
+        title = f"{app.title} — {app.sub_title}"
         now = datetime.now().strftime("%H:%M:%S")
         clock_at = max(width - cell_len(now) - 1, 0)
         first_free = cell_len(icon) + 2

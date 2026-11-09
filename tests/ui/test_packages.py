@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import replace
 
 from textual.widgets import Button, Input
@@ -344,3 +345,21 @@ def test_wide_names_are_cut_by_display_width(tmp_path):
 
     assert cell_len(fit("漢字漢字漢字漢字", 7, "…")) == 7
     assert cell_len(fit("ab", 7, "…")) == 7
+
+
+async def test_quitting_during_a_scan_ends_cleanly(make_app):
+    from wingetdeck.winget.fake import FakeBackend, demo_packages
+
+    class SlowScan(FakeBackend):
+        async def scan(self, source, include_pinned=False):
+            await asyncio.sleep(30)
+            return await super().scan(source, include_pinned)
+
+    app = make_app(SlowScan(demo_packages()))
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.show_packages(None)
+        await pilot.pause(0.2)
+        assert app.screen._scanning
+        await app.action_quit()
+    assert app._exception is None

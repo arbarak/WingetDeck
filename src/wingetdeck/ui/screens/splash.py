@@ -12,6 +12,7 @@ from textual.containers import Center, Horizontal, Vertical
 from textual.widgets import Button, Footer, ListItem, ListView, Static
 
 from ..pixels import BOX, LOGO, PALETTE, PixelArt
+from ..console import MIN_WINGET, winget_too_old
 from .base import DeckScreen, TitleBar
 
 _ALL_SOURCES = "All sources"
@@ -97,6 +98,17 @@ class SplashScreen(DeckScreen):
         if caps is None:
             app.log_file.warn("winget not found")
             app.show_no_winget()
+            return
+        app.log_file.info(
+            "winget found",
+            version=caps.version,
+            live_progress=caps.live_progress,
+            direct_downloader=caps.direct_downloader,
+            settings_locked=caps.settings_locked,
+        )
+        if winget_too_old(caps.version):
+            needed = ".".join(str(part) for part in MIN_WINGET)
+            app.show_no_winget(f"This PC has winget {caps.version}. WingetDeck needs {needed} or newer.")
             return
         self.query_one("#versions", Static).update(f"winget {caps.version}  ·  Windows {platform.version()}")
         try:

@@ -8,7 +8,7 @@ from textual.widgets import Button, Footer, Static
 from .base import DeckScreen, TitleBar
 
 HELP = """\
-WingetDeck upgrades apps through winget, and winget could not be started on this PC.
+WingetDeck upgrades apps through winget, and winget could not be used on this PC.
 
 To get winget:
   1. Open the Microsoft Store and install or update "App Installer".

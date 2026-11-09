@@ -8,18 +8,20 @@ from dataclasses import replace
 from pathlib import Path
 
 from textual.app import App
+from textual.driver import Driver
 from textual.binding import Binding
 from textual.screen import ModalScreen
 
 from .. import __version__
 from ..core.logs import SessionLog
-from ..core.queue import ItemState, RunQueue
+from ..core.queue import ItemState, RunQueue, RunState
 from ..core.runner import Runner, RunView
 from ..core.safety import SnapshotFailed, create_restore_point, take_snapshot
 from ..core.store import HistoryEntry, Store
 from ..paths import is_elevated
 from ..winget.backend import UpgradeOptions, WingetBackend
 from ..winget.models import ChangeKind, Package
+from .notify import notify_done
 from .responsive import MEDIUM, WIDE, taskbar_code, title_text
 from .screens.dialogs import ConfirmDialog
 from .screens.history import HistoryScreen
@@ -29,6 +31,7 @@ from .screens.packages import PackagesScreen
 from .screens.progress import ProgressScreen
 from .screens.settings import SettingsScreen
 from .screens.splash import SplashScreen
+from .symbols import to_ascii
 from .themes import DEFAULT_THEME, DEFAULT_VARIABLES, THEMES
 
 
@@ -45,6 +48,8 @@ _NO_AGREE = "Skip those packages"
 _GO_ON = "Go on without it"
 _RESUME = "Resume"
 _DISCARD = "Don't resume"
+
+_NOTIFY_AFTER_SECONDS = 60  # a shorter run is one the person is probably still watching
 
 
 class WingetDeckApp(App):
@@ -75,6 +80,8 @@ class WingetDeckApp(App):
         self._resume_offered = False
         self._last_title = ""
         self._last_taskbar = ""
+        self.notifier = notify_done
+        self._notified = False
         super().__init__()
         runner.on_change = self._run_changed
         self.sub_title = f"v{__version__}"
@@ -102,6 +109,25 @@ class WingetDeckApp(App):
         for listener in list(self._run_listeners):
             listener(view)
         self._show_on_taskbar(view)
+        self._notify_if_finished(view)
+
+    def _notify_if_finished(self, view: RunView) -> None:
+        if view.state is not RunState.FINISHED:
+            self._notified = False
+        elif not self._notified and view.summary is not None and view.elapsed_s >= _NOTIFY_AFTER_SECONDS:
+            self._notified = True
+            self.notifier(view.summary)
+
+    def get_driver_class(self) -> type[Driver]:
+        driver = super().get_driver_class()
+        if not self.ascii_mode:
+            return driver
+
+        class AsciiDriver(driver):
+            def write(self, data: str) -> None:
+                super().write(to_ascii(data))
+
+        return AsciiDriver
 
     def write_terminal(self, text: str) -> None:
         if self._driver is not None:
